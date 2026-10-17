@@ -1,0 +1,15 @@
+<Application x:Class="Orts.Launcher.App"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             StartupUri="MainWindow.xaml">
+    <Application.Resources>
+        <!-- Dark slate palette -->
+        <SolidColorBrush x:Key="WindowBackgroundBrush" Color="#121212" />
+        <SolidColorBrush x:Key="SurfaceBrush" Color="#1E1E1E" />
+        <SolidColorBrush x:Key="SurfaceAltBrush" Color="#181818" />
+        <SolidColorBrush x:Key="PanelBorderBrush" Color="#2A2A2A" />
+        <SolidColorBrush x:Key="PrimaryTextBrush" Color="#F5F5F5" />
+        <SolidColorBrush x:Key="SecondaryTextBrush" Color="#9AA0A6" />
+        <SolidColorBrush x:Key="AccentBrush" Color="#3B82F6" />
+    </Application.Resources>
+</Application>

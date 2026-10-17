@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net6-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <UseWindowsForms>false</UseWindowsForms>
+    <Nullable>enable</Nullable>
+    <AssemblyTitle>Open Rails Modern Launcher</AssemblyTitle>
+    <Description>Open Rails Transport Simulator</Description>
+    <Company>Open Rails</Company>
+    <Product>Open Rails</Product>
+    <Copyright>Copyright © 2009 - 2022</Copyright>
+    <PackageLicenseExpression>GPL-3.0-or-later</PackageLicenseExpression>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Orts.Common\Orts.Common.csproj" />
+    <ProjectReference Include="..\Orts.Settings\Orts.Settings.csproj" />
+    <ProjectReference Include="..\Orts.Menu\Orts.Menu.csproj" />
+    <ProjectReference Include="..\Orts.Content\Orts.Content.csproj" />
+  </ItemGroup>
+
+</Project>

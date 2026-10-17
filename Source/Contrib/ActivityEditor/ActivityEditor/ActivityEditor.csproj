@@ -1,0 +1,90 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net6-windows</TargetFramework>
+    <OutputType>WinExe</OutputType>
+    <AssemblyName>Contrib.ActivityEditor</AssemblyName>
+    <ApplicationIcon>..\..\..\ORTS.ico</ApplicationIcon>
+    <UseWindowsForms>true</UseWindowsForms>
+    <ImportWindowsDesktopTargets>true</ImportWindowsDesktopTargets>
+    <IsPublishable>False</IsPublishable>
+    <AssemblyTitle>Open Rails Activity Editor (Contributed)</AssemblyTitle>
+    <Description>Open Rails Transport Simulator</Description>
+    <Company>Open Rails</Company>
+    <Product>Open Rails (disabled)</Product>
+    <Copyright>Copyright © 2009 - 2022</Copyright>
+    <PackageLicenseExpression>GPL-3.0-or-later</PackageLicenseExpression>
+    <DefineConstants>TRACE;WINDOWS;ACTIVITY_EDITOR</DefineConstants>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Update="Wizard\ActivityDescr.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Update="Wizard\SelectRoute.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Update="Wizard\SinglePage.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Update="Wizard\TrainInfo.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="icon\tag.ico">
+    </EmbeddedResource>
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="icon\signal.ico">
+    </EmbeddedResource>
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="icon\signalOther.ico">
+    </EmbeddedResource>
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="icon\signalRepeat.ico">
+    </EmbeddedResource>
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="icon\signalShunt.ico">
+    </EmbeddedResource>
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="icon\speedLimit.ico">
+    </EmbeddedResource>
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="icon\SignalBox.ico" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="icon\StationConnector.ico">
+    </EmbeddedResource>
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="icon\ruler.ico" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="icon\Ruler.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="icon\Start.ico" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="icon\Stop.ico" />
+    <EmbeddedResource Include="icon\Wait.ico" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\Orts.Formats.Msts\Orts.Formats.Msts.csproj" />
+    <ProjectReference Include="..\..\..\Orts.Formats.OR\Orts.Formats.OR.csproj" />
+    <ProjectReference Include="..\..\..\Orts.Parsers.Msts\Orts.Parsers.Msts.csproj" />
+    <ProjectReference Include="..\..\..\Orts.Common\Orts.Common.csproj" />
+    <ProjectReference Include="..\..\..\Orts.Settings\Orts.Settings.csproj" />
+    <ProjectReference Include="..\LibAE\LibAE.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.DotNet.UpgradeAssistant.Extensions.Default.Analyzers" Version="0.4.355802">
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="MonoGame.Framework.WindowsDX" Version="3.8.1.303" />
+  </ItemGroup>
+</Project>

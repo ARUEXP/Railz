@@ -1,0 +1,39 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net6-windows</TargetFramework>
+    <OutputType>Library</OutputType>
+    <AssemblyName>Contrib.LibAE</AssemblyName>
+    <IsPublishable>False</IsPublishable>
+    <AssemblyTitle>Open Rails LibAE Library (Contributed)</AssemblyTitle>
+    <Description>Open Rails Transport Simulator</Description>
+    <Company>Open Rails</Company>
+    <Product>Open Rails</Product>
+    <Copyright>Copyright © 2009 - 2022</Copyright>
+    <PackageLicenseExpression>GPL-3.0-or-later</PackageLicenseExpression>
+    <DefineConstants>TRACE;WINDOWS;ACTIVITY_EDITOR;JSON_OR_XML</DefineConstants>
+  </PropertyGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Icon\Start.ico" />
+    <EmbeddedResource Include="Icon\Stop.ico" />
+    <EmbeddedResource Include="Icon\Wait.ico" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="OR\" />
+    <Folder Include="Utility\" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\Orts.Formats.Msts\Orts.Formats.Msts.csproj" />
+    <ProjectReference Include="..\..\..\Orts.Formats.OR\Orts.Formats.OR.csproj" />
+    <ProjectReference Include="..\..\..\Orts.Parsers.Msts\Orts.Parsers.Msts.csproj" />
+    <ProjectReference Include="..\..\..\Orts.Common\Orts.Common.csproj" />
+    <ProjectReference Include="..\..\..\Orts.Content\Orts.Content.csproj" />
+    <ProjectReference Include="..\..\..\Orts.Settings\Orts.Settings.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.DotNet.UpgradeAssistant.Extensions.Default.Analyzers" Version="0.4.355802">
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="MonoGame.Framework.WindowsDX" Version="3.8.1.303" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.2" />
+  </ItemGroup>
+</Project>

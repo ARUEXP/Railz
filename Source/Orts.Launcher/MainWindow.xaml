@@ -10,7 +10,7 @@
         WindowStartupLocation="CenterScreen"
         Background="{StaticResource WindowBackgroundBrush}"
         Foreground="{StaticResource PrimaryTextBrush}"
-        FontFamily="Segoe UI"
+        FontFamily="{StaticResource GoogleSansFlex}"
         UseLayoutRounding="True"
         SnapsToDevicePixels="True"
         TextOptions.TextFormattingMode="Display">
@@ -24,18 +24,18 @@
                     <ControlTemplate TargetType="ListBoxItem">
                         <Border x:Name="Root"
                                 Background="Transparent"
-                                CornerRadius="8"
+                                CornerRadius="2"
                                 BorderThickness="1"
                                 BorderBrush="Transparent">
                             <ContentPresenter />
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Root" Property="Background" Value="#202020" />
+                                <Setter TargetName="Root" Property="Background" Value="#161616" />
                             </Trigger>
                             <Trigger Property="IsSelected" Value="True">
                                 <Setter TargetName="Root" Property="BorderBrush" Value="{StaticResource AccentBrush}" />
-                                <Setter TargetName="Root" Property="Background" Value="#1B2430" />
+                                <Setter TargetName="Root" Property="Background" Value="#0B1622" />
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -43,40 +43,55 @@
             </Setter>
         </Style>
 
-        <Style x:Key="BadgeBorder" TargetType="Border">
-            <Setter Property="Background" Value="#1B2430" />
-            <Setter Property="BorderBrush" Value="{StaticResource PanelBorderBrush}" />
-            <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="CornerRadius" Value="10" />
-            <Setter Property="Padding" Value="10,3" />
-            <Setter Property="Margin" Value="0,0,8,0" />
-        </Style>
-
+        <!-- Micro-label used above a control. -->
         <Style x:Key="SectionLabel" TargetType="TextBlock">
-            <Setter Property="FontSize" Value="11" />
-            <Setter Property="Margin" Value="0,0,0,6" />
-            <Setter Property="Foreground" Value="{StaticResource SecondaryTextBrush}" />
+            <Setter Property="FontSize" Value="10" />
+            <Setter Property="FontWeight" Value="Bold" />
+            <Setter Property="Margin" Value="0,0,0,4" />
+            <Setter Property="Foreground" Value="{StaticResource MutedTextBrush}" />
         </Style>
 
         <!-- Small uppercase heading at the top of a card. -->
         <Style x:Key="CardTitle" TargetType="TextBlock">
             <Setter Property="FontSize" Value="11" />
-            <Setter Property="FontWeight" Value="SemiBold" />
-            <Setter Property="Foreground" Value="{StaticResource SecondaryTextBrush}" />
+            <Setter Property="FontWeight" Value="Bold" />
+            <Setter Property="Foreground" Value="{StaticResource MutedTextBrush}" />
+        </Style>
+
+        <!-- Key/value rows inside a card. -->
+        <Style x:Key="SpecLabel" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="10" />
+            <Setter Property="FontWeight" Value="Bold" />
+            <Setter Property="Foreground" Value="{StaticResource MutedTextBrush}" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="Margin" Value="0,0,14,0" />
+        </Style>
+
+        <Style x:Key="SpecValue" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="Foreground" Value="{StaticResource PrimaryTextBrush}" />
+            <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+
+        <Style x:Key="HairLine" TargetType="Border">
+            <Setter Property="Height" Value="1" />
+            <Setter Property="Background" Value="{StaticResource PanelBorderBrush}" />
+            <Setter Property="Margin" Value="0,14" />
         </Style>
 
         <Style x:Key="CardBorder" TargetType="Border">
             <Setter Property="Background" Value="{StaticResource SurfaceAltBrush}" />
             <Setter Property="BorderBrush" Value="{StaticResource PanelBorderBrush}" />
             <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="CornerRadius" Value="10" />
+            <Setter Property="CornerRadius" Value="2" />
             <Setter Property="Padding" Value="18" />
         </Style>
 
         <DataTemplate x:Key="PillTemplate">
             <TextBlock>
                 <Run Text="{Binding Icon, Mode=OneWay}" />
-                <Run Text="  " />
+                <Run Text=" " />
                 <Run Text="{Binding Label, Mode=OneWay}" />
             </TextBlock>
         </DataTemplate>
@@ -84,7 +99,7 @@
         <!-- A ListBox used as a radio group: this is the pill look for the environment choices. -->
         <Style x:Key="PillItemContainer" TargetType="ListBoxItem">
             <Setter Property="Foreground" Value="{StaticResource SecondaryTextBrush}" />
-            <Setter Property="Margin" Value="0,0,6,0" />
+            <Setter Property="Margin" Value="0,0,4,0" />
             <Setter Property="Cursor" Value="Hand" />
             <Setter Property="SnapsToDevicePixels" Value="True" />
             <Setter Property="Template">
@@ -94,8 +109,8 @@
                                 Background="{StaticResource SurfaceBrush}"
                                 BorderBrush="{StaticResource PanelBorderBrush}"
                                 BorderThickness="1"
-                                CornerRadius="16"
-                                Padding="12,5">
+                                CornerRadius="2"
+                                Padding="9,5">
                             <ContentPresenter />
                         </Border>
                         <ControlTemplate.Triggers>
@@ -103,8 +118,8 @@
                                 <Setter TargetName="Bd" Property="Background" Value="{StaticResource PanelBorderBrush}" />
                             </Trigger>
                             <Trigger Property="IsSelected" Value="True">
-                                <Setter TargetName="Bd" Property="Background" Value="{StaticResource AccentHoverBrush}" />
-                                <Setter TargetName="Bd" Property="BorderBrush" Value="{StaticResource AccentHoverBrush}" />
+                                <Setter TargetName="Bd" Property="Background" Value="{StaticResource AccentSolidBrush}" />
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="{StaticResource AccentSolidBrush}" />
                                 <Setter Property="Foreground" Value="#FFFFFF" />
                             </Trigger>
                         </ControlTemplate.Triggers>
@@ -124,8 +139,9 @@
             <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Disabled" />
             <Setter Property="ItemsPanel">
                 <Setter.Value>
+                    <!-- Wraps instead of clipping when the window is narrow. -->
                     <ItemsPanelTemplate>
-                        <StackPanel Orientation="Horizontal" />
+                        <WrapPanel Orientation="Horizontal" />
                     </ItemsPanelTemplate>
                 </Setter.Value>
             </Setter>
@@ -158,7 +174,7 @@
         <!-- Content: profile/route list + driving deck -->
         <Grid Grid.Row="1">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="360" />
+                <ColumnDefinition Width="330" />
                 <ColumnDefinition Width="*" />
             </Grid.ColumnDefinitions>
 
@@ -170,9 +186,8 @@
                     Padding="16">
                 <DockPanel>
                     <StackPanel DockPanel.Dock="Top" Margin="0,0,0,12">
-                        <TextBlock Text="Game Library"
-                                   FontSize="11" Margin="0,0,0,5"
-                                   Foreground="{StaticResource SecondaryTextBrush}" />
+                        <TextBlock Text="GAME LIBRARY"
+                                   Style="{StaticResource SectionLabel}" Margin="0,0,0,8" />
                         <Grid Margin="0,0,0,12">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*" />
@@ -189,9 +204,8 @@
                                     ToolTip="Add a game library folder (the one containing ROUTES and TRAINS)" />
                         </Grid>
 
-                        <TextBlock Text="Choose a Route"
-                                   FontSize="11" Margin="0,0,0,5"
-                                   Foreground="{StaticResource SecondaryTextBrush}" />
+                        <TextBlock Text="CHOOSE A ROUTE"
+                                   Style="{StaticResource SectionLabel}" Margin="0,0,0,8" />
                         <Grid>
                             <TextBox Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
                                      ToolTip="Filter routes by name or description" />
@@ -225,7 +239,7 @@
                                 <Border Background="{StaticResource SurfaceBrush}"
                                         BorderBrush="{StaticResource PanelBorderBrush}"
                                         BorderThickness="1"
-                                        CornerRadius="8"
+                                        CornerRadius="2"
                                         Padding="12,10">
                                     <StackPanel>
                                         <TextBlock Text="{Binding Name}"
@@ -293,21 +307,21 @@
                             </Grid.ColumnDefinitions>
 
                             <!-- Hero artwork, or the themed banner when the route ships none -->
-                            <Border Grid.Column="0" Width="128" Height="70" CornerRadius="8"
+                            <Border Grid.Column="0" Width="128" Height="70" CornerRadius="2"
                                     BorderBrush="{StaticResource PanelBorderBrush}"
                                     BorderThickness="1"
                                     ClipToBounds="True">
                                 <Grid>
                                     <Grid.Background>
                                         <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                                            <GradientStop Color="#1E1E1E" Offset="0" />
-                                            <GradientStop Color="#232B36" Offset="1" />
+                                            <GradientStop Color="#0D0D0D" Offset="0" />
+                                            <GradientStop Color="#101820" Offset="1" />
                                         </LinearGradientBrush>
                                     </Grid.Background>
                                     <TextBlock Text="OPEN RAILS"
                                                FontSize="11" FontWeight="Bold"
                                                HorizontalAlignment="Center" VerticalAlignment="Center"
-                                               Foreground="#33404F" />
+                                               Foreground="#2A3542" />
                                     <Image Source="{Binding SelectedRoute.HeroImage}"
                                            Stretch="UniformToFill"
                                            Visibility="{Binding SelectedRoute.HasHeroImage, Converter={StaticResource BoolToVis}}" />
@@ -347,10 +361,52 @@
 
                             <!-- Your Train -->
                             <Border Grid.Column="0" Style="{StaticResource CardBorder}" Margin="0,0,8,0">
-                                <DockPanel>
-                                    <StackPanel DockPanel.Dock="Bottom">
+                                <Grid>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="*" />
+                                        <RowDefinition Height="Auto" />
+                                    </Grid.RowDefinitions>
+
+                                    <TextBlock Grid.Row="0" Text="YOUR TRAIN" Style="{StaticResource CardTitle}" />
+
+                                    <!-- Chosen locomotive and its specs, centred between the title and the picker. -->
+                                    <StackPanel Grid.Row="1" VerticalAlignment="Center" Margin="0,16">
+                                        <TextBlock FontSize="24" FontWeight="SemiBold"
+                                                   TextTrimming="CharacterEllipsis"
+                                                   Foreground="{StaticResource PrimaryTextBrush}"
+                                                   Text="{Binding SelectedConsist.LocomotiveName, FallbackValue=No train selected yet, TargetNullValue=No train selected yet}" />
+                                        <TextBlock Margin="0,6,0,0" FontSize="12"
+                                                   TextTrimming="CharacterEllipsis"
+                                                   Foreground="{StaticResource SecondaryTextBrush}"
+                                                   Text="{Binding SelectedConsist.Name, FallbackValue=—, TargetNullValue=—}" />
+
+                                        <Border Style="{StaticResource HairLine}" Margin="0,18,0,16" />
+
+                                        <Grid Margin="0,0,0,12">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="86" />
+                                                <ColumnDefinition Width="*" />
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Grid.Column="0" Text="CAR COUNT" Style="{StaticResource SpecLabel}" />
+                                            <TextBlock Grid.Column="1" Style="{StaticResource SpecValue}"
+                                                       Text="{Binding SelectedConsist.CarCountLabel, FallbackValue=—, TargetNullValue=—}" />
+                                        </Grid>
+
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="86" />
+                                                <ColumnDefinition Width="*" />
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Grid.Column="0" Text="DEPARTURE" Style="{StaticResource SpecLabel}" />
+                                            <TextBlock Grid.Column="1" Style="{StaticResource SpecValue}"
+                                                       Text="{Binding SelectedPath.Label, FallbackValue=Not set, TargetNullValue=Not set}" />
+                                        </Grid>
+                                    </StackPanel>
+
+                                    <StackPanel Grid.Row="2">
                                         <TextBlock Text="CHANGE TRAIN" Style="{StaticResource CardTitle}"
-                                                   Margin="0,0,0,7" />
+                                                   Margin="0,0,0,8" />
                                         <ComboBox ItemsSource="{Binding Consists}"
                                                   SelectedItem="{Binding SelectedConsist, Mode=TwoWay}"
                                                   TextSearch.TextPath="LocomotiveName"
@@ -369,33 +425,7 @@
                                             </ComboBox.ItemTemplate>
                                         </ComboBox>
                                     </StackPanel>
-
-                                    <!-- Title at the top, the chosen locomotive centred in between. -->
-                                    <Grid>
-                                        <TextBlock Text="YOUR TRAIN" Style="{StaticResource CardTitle}"
-                                                   VerticalAlignment="Top" />
-                                        <StackPanel VerticalAlignment="Center">
-                                            <TextBlock FontSize="20" FontWeight="SemiBold"
-                                                       TextTrimming="CharacterEllipsis"
-                                                       Foreground="{StaticResource AccentBrush}"
-                                                       Text="{Binding SelectedConsist.LocomotiveName, FallbackValue=No train selected yet, TargetNullValue=No train selected yet}" />
-                                            <DockPanel Margin="0,8,0,0">
-                                                <Border DockPanel.Dock="Right" Margin="10,0,0,0"
-                                                        VerticalAlignment="Center"
-                                                        Style="{StaticResource BadgeBorder}"
-                                                        Visibility="{Binding SelectedConsist.HasCarCount, Converter={StaticResource BoolToVis}, FallbackValue=Collapsed}">
-                                                    <TextBlock FontSize="11" Foreground="{StaticResource AccentBrush}">
-                                                        <Run Text="{Binding SelectedConsist.CarCount, Mode=OneWay}" /><Run Text=" cars" />
-                                                    </TextBlock>
-                                                </Border>
-                                                <TextBlock Text="{Binding SelectedConsist.Name, FallbackValue=—, TargetNullValue=—}"
-                                                           FontSize="12" VerticalAlignment="Center"
-                                                           TextTrimming="CharacterEllipsis"
-                                                           Foreground="{StaticResource SecondaryTextBrush}" />
-                                            </DockPanel>
-                                        </StackPanel>
-                                    </Grid>
-                                </DockPanel>
+                                </Grid>
                             </Border>
 
                             <!-- Conditions & start -->
@@ -412,8 +442,8 @@
                                     <TextBlock Grid.Row="0" Text="CONDITIONS &amp; START"
                                                Style="{StaticResource CardTitle}" />
 
-                                    <StackPanel Grid.Row="1" VerticalAlignment="Top" Margin="0,14,0,0">
-                                        <TextBlock Text="Departure" Style="{StaticResource SectionLabel}" />
+                                    <StackPanel Grid.Row="1" VerticalAlignment="Center" Margin="0,8,0,0">
+                                        <TextBlock Text="DEPARTURE" Style="{StaticResource SectionLabel}" />
                                         <ComboBox ItemsSource="{Binding Paths}"
                                                   SelectedItem="{Binding SelectedPath, Mode=TwoWay}"
                                                   ToolTip="Where your drive begins and ends">
@@ -425,22 +455,22 @@
                                         </ComboBox>
                                     </StackPanel>
 
-                                    <StackPanel Grid.Row="2" VerticalAlignment="Top" Margin="0,14,0,0">
-                                        <TextBlock Text="Time of day" Style="{StaticResource SectionLabel}" />
+                                    <StackPanel Grid.Row="2" VerticalAlignment="Center" Margin="0,8,0,0">
+                                        <TextBlock Text="TIME OF DAY" Style="{StaticResource SectionLabel}" />
                                         <ListBox Style="{StaticResource PillRow}"
                                                  ItemsSource="{Binding TimeOptions}"
                                                  SelectedItem="{Binding SelectedTimeOption, Mode=TwoWay}" />
                                     </StackPanel>
 
-                                    <StackPanel Grid.Row="3" VerticalAlignment="Top" Margin="0,14,0,0">
-                                        <TextBlock Text="Weather" Style="{StaticResource SectionLabel}" />
+                                    <StackPanel Grid.Row="3" VerticalAlignment="Center" Margin="0,8,0,0">
+                                        <TextBlock Text="WEATHER" Style="{StaticResource SectionLabel}" />
                                         <ListBox Style="{StaticResource PillRow}"
                                                  ItemsSource="{Binding WeatherOptions}"
                                                  SelectedItem="{Binding SelectedWeatherOption, Mode=TwoWay}" />
                                     </StackPanel>
 
-                                    <StackPanel Grid.Row="4" VerticalAlignment="Top" Margin="0,14,0,0">
-                                        <TextBlock Text="Season" Style="{StaticResource SectionLabel}" />
+                                    <StackPanel Grid.Row="4" VerticalAlignment="Center" Margin="0,8,0,0">
+                                        <TextBlock Text="SEASON" Style="{StaticResource SectionLabel}" />
                                         <ListBox Style="{StaticResource PillRow}"
                                                  ItemsSource="{Binding SeasonOptions}"
                                                  SelectedItem="{Binding SelectedSeasonOption, Mode=TwoWay}" />
@@ -457,7 +487,8 @@
                                            Style="{StaticResource CardTitle}" />
                                 <TextBlock DockPanel.Dock="Top"
                                            Text="Pick a mission to run, then press Start Mission."
-                                           Style="{StaticResource SectionLabel}" Margin="0,4,0,10" />
+                                           FontSize="11.5" Margin="0,6,0,12"
+                                           Foreground="{StaticResource SecondaryTextBrush}" />
                                 <ListBox ItemsSource="{Binding Activities}"
                                          SelectedItem="{Binding SelectedActivity, Mode=TwoWay}"
                                          ItemContainerStyle="{StaticResource RouteItemContainer}"
@@ -467,7 +498,7 @@
                                         <DataTemplate>
                                             <Border Background="{StaticResource SurfaceBrush}"
                                                     BorderBrush="{StaticResource PanelBorderBrush}"
-                                                    BorderThickness="1" CornerRadius="8" Padding="12,10">
+                                                    BorderThickness="1" CornerRadius="2" Padding="12,10">
                                                 <StackPanel>
                                                     <TextBlock Text="{Binding Name}"
                                                                FontSize="14" FontWeight="SemiBold"
@@ -486,7 +517,7 @@
                                                                Foreground="{StaticResource SecondaryTextBrush}" />
                                                     <TextBlock Text="{Binding Briefing}"
                                                                FontSize="11.5" Margin="0,6,0,0" TextWrapping="Wrap"
-                                                               Foreground="#9AA4B2"
+                                                               Foreground="{StaticResource SecondaryTextBrush}"
                                                                Visibility="{Binding HasBriefing, Converter={StaticResource BoolToVis}}" />
                                                 </StackPanel>
                                             </Border>

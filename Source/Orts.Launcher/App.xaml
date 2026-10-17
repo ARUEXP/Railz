@@ -5,16 +5,28 @@
     <Application.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVis" />
 
-        <!-- ==================== Dark slate palette ==================== -->
-        <SolidColorBrush x:Key="WindowBackgroundBrush" Color="#121212" />
-        <SolidColorBrush x:Key="SurfaceBrush" Color="#1E1E1E" />
-        <SolidColorBrush x:Key="SurfaceAltBrush" Color="#181818" />
-        <SolidColorBrush x:Key="PanelBorderBrush" Color="#2A2A2A" />
-        <SolidColorBrush x:Key="PrimaryTextBrush" Color="#F5F5F5" />
-        <SolidColorBrush x:Key="SecondaryTextBrush" Color="#9AA0A6" />
+        <!-- ==================== Fonts ==================== -->
+        <!-- Google Sans Flex ships as a variable font; WPF renders its default instance. -->
+        <FontFamily x:Key="GoogleSansFlex">./Resources/Fonts/#Google Sans Flex</FontFamily>
+
+        <!-- ==================== AMOLED brutalist palette ==================== -->
+        <SolidColorBrush x:Key="WindowBackgroundBrush" Color="#000000" />
+        <SolidColorBrush x:Key="SurfaceBrush" Color="#0A0A0A" />
+        <SolidColorBrush x:Key="SurfaceAltBrush" Color="#0D0D0D" />
+        <SolidColorBrush x:Key="PanelBorderBrush" Color="#222222" />
+        <SolidColorBrush x:Key="PrimaryTextBrush" Color="#FFFFFF" />
+        <SolidColorBrush x:Key="SecondaryTextBrush" Color="#8C8C8C" />
+        <SolidColorBrush x:Key="MutedTextBrush" Color="#777777" />
+        <!-- AccentBrush draws text and outlines; AccentSolidBrush fills solid blocks. -->
         <SolidColorBrush x:Key="AccentBrush" Color="#3B82F6" />
-        <SolidColorBrush x:Key="AccentHoverBrush" Color="#2563EB" />
+        <SolidColorBrush x:Key="AccentSolidBrush" Color="#2563EB" />
+        <SolidColorBrush x:Key="AccentHoverBrush" Color="#3B82F6" />
         <SolidColorBrush x:Key="AccentPressedBrush" Color="#1D4ED8" />
+
+        <!-- ==================== Base typography ==================== -->
+        <Style TargetType="TextBlock">
+            <Setter Property="FontFamily" Value="{StaticResource GoogleSansFlex}" />
+        </Style>
 
         <!-- ==================== Dark button ==================== -->
         <Style TargetType="Button">
@@ -23,6 +35,7 @@
             <Setter Property="BorderBrush" Value="{StaticResource PanelBorderBrush}" />
             <Setter Property="BorderThickness" Value="1" />
             <Setter Property="Padding" Value="12,0" />
+            <Setter Property="FontFamily" Value="{StaticResource GoogleSansFlex}" />
             <Setter Property="Height" Value="34" />
             <Setter Property="Cursor" Value="Hand" />
             <Setter Property="SnapsToDevicePixels" Value="True" />
@@ -33,7 +46,7 @@
                                 Background="{TemplateBinding Background}"
                                 BorderBrush="{TemplateBinding BorderBrush}"
                                 BorderThickness="{TemplateBinding BorderThickness}"
-                                CornerRadius="6">
+                                CornerRadius="2">
                             <ContentPresenter HorizontalAlignment="Center"
                                               VerticalAlignment="Center"
                                               Margin="{TemplateBinding Padding}" />
@@ -64,6 +77,7 @@
             <Setter Property="BorderBrush" Value="{StaticResource PanelBorderBrush}" />
             <Setter Property="BorderThickness" Value="1" />
             <Setter Property="Padding" Value="10,0" />
+            <Setter Property="FontFamily" Value="{StaticResource GoogleSansFlex}" />
             <Setter Property="Height" Value="34" />
             <Setter Property="CaretBrush" Value="{StaticResource PrimaryTextBrush}" />
             <Setter Property="SelectionBrush" Value="{StaticResource AccentBrush}" />
@@ -75,7 +89,7 @@
                                 Background="{TemplateBinding Background}"
                                 BorderBrush="{TemplateBinding BorderBrush}"
                                 BorderThickness="{TemplateBinding BorderThickness}"
-                                CornerRadius="6">
+                                CornerRadius="2">
                             <ScrollViewer x:Name="PART_ContentHost"
                                           Margin="{TemplateBinding Padding}"
                                           VerticalAlignment="Center" />
@@ -96,6 +110,7 @@
         <!-- ==================== Dark combo box item ==================== -->
         <Style TargetType="ComboBoxItem">
             <Setter Property="Foreground" Value="{StaticResource PrimaryTextBrush}" />
+            <Setter Property="FontFamily" Value="{StaticResource GoogleSansFlex}" />
             <Setter Property="Padding" Value="10,7" />
             <Setter Property="SnapsToDevicePixels" Value="True" />
             <Setter Property="Template">
@@ -126,6 +141,7 @@
             <Setter Property="BorderBrush" Value="{StaticResource PanelBorderBrush}" />
             <Setter Property="BorderThickness" Value="1" />
             <Setter Property="Padding" Value="10,0" />
+            <Setter Property="FontFamily" Value="{StaticResource GoogleSansFlex}" />
             <Setter Property="Height" Value="34" />
             <Setter Property="MaxDropDownHeight" Value="260" />
             <Setter Property="SnapsToDevicePixels" Value="True" />
@@ -137,7 +153,7 @@
                                     Background="{TemplateBinding Background}"
                                     BorderBrush="{TemplateBinding BorderBrush}"
                                     BorderThickness="{TemplateBinding BorderThickness}"
-                                    CornerRadius="6">
+                                    CornerRadius="2">
                                 <Grid>
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*" />
@@ -175,7 +191,7 @@
                                 <Border Background="{StaticResource SurfaceBrush}"
                                         BorderBrush="{StaticResource PanelBorderBrush}"
                                         BorderThickness="1"
-                                        CornerRadius="6"
+                                        CornerRadius="2"
                                         Margin="0,4,0,0"
                                         MinWidth="{TemplateBinding ActualWidth}"
                                         MaxHeight="{TemplateBinding MaxDropDownHeight}">
@@ -207,6 +223,9 @@
             <Setter Property="BorderBrush" Value="{StaticResource PanelBorderBrush}" />
             <Setter Property="BorderThickness" Value="1" />
             <Setter Property="Padding" Value="14,0" />
+            <Setter Property="FontFamily" Value="{StaticResource GoogleSansFlex}" />
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="FontWeight" Value="SemiBold" />
             <Setter Property="Height" Value="32" />
             <Setter Property="Margin" Value="0,0,6,0" />
             <Setter Property="Cursor" Value="Hand" />
@@ -218,7 +237,7 @@
                                 Background="{TemplateBinding Background}"
                                 BorderBrush="{TemplateBinding BorderBrush}"
                                 BorderThickness="{TemplateBinding BorderThickness}"
-                                CornerRadius="6">
+                                CornerRadius="2">
                             <ContentPresenter HorizontalAlignment="Center"
                                               VerticalAlignment="Center"
                                               Margin="{TemplateBinding Padding}" />
@@ -228,8 +247,8 @@
                                 <Setter TargetName="Bd" Property="Background" Value="{StaticResource PanelBorderBrush}" />
                             </Trigger>
                             <Trigger Property="IsChecked" Value="True">
-                                <Setter TargetName="Bd" Property="Background" Value="{StaticResource AccentHoverBrush}" />
-                                <Setter TargetName="Bd" Property="BorderBrush" Value="{StaticResource AccentHoverBrush}" />
+                                <Setter TargetName="Bd" Property="Background" Value="{StaticResource AccentSolidBrush}" />
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="{StaticResource AccentSolidBrush}" />
                                 <Setter Property="Foreground" Value="{StaticResource PrimaryTextBrush}" />
                             </Trigger>
                         </ControlTemplate.Triggers>
@@ -240,10 +259,11 @@
         <!-- ==================== Giant primary action button ==================== -->
         <Style x:Key="PrimaryActionButton" TargetType="Button">
             <Setter Property="Foreground" Value="#FFFFFF" />
-            <Setter Property="Background" Value="{StaticResource AccentBrush}" />
-            <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}" />
+            <Setter Property="Background" Value="{StaticResource AccentSolidBrush}" />
+            <Setter Property="BorderBrush" Value="{StaticResource AccentSolidBrush}" />
             <Setter Property="BorderThickness" Value="1" />
             <Setter Property="Padding" Value="24,0" />
+            <Setter Property="FontFamily" Value="{StaticResource GoogleSansFlex}" />
             <Setter Property="Height" Value="54" />
             <Setter Property="FontSize" Value="17" />
             <Setter Property="FontWeight" Value="SemiBold" />
@@ -256,7 +276,7 @@
                                 Background="{TemplateBinding Background}"
                                 BorderBrush="{TemplateBinding BorderBrush}"
                                 BorderThickness="{TemplateBinding BorderThickness}"
-                                CornerRadius="10">
+                                CornerRadius="2">
                             <ContentPresenter HorizontalAlignment="Center"
                                               VerticalAlignment="Center"
                                               Margin="{TemplateBinding Padding}" />

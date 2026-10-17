@@ -18,6 +18,11 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <!-- Google Sans Flex, compiled into the assembly as a WPF font resource. -->
+    <Resource Include="Resources\Fonts\GoogleSansFlex-VariableFont.ttf" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\Orts.Common\Orts.Common.csproj" />
     <ProjectReference Include="..\Orts.Settings\Orts.Settings.csproj" />
     <ProjectReference Include="..\Orts.Menu\Orts.Menu.csproj" />

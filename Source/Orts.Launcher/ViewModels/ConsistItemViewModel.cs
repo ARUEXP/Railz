@@ -56,11 +56,19 @@ namespace Orts.Launcher.ViewModels
         public int? CarCount
         {
             get => _carCount;
-            private set { if (SetProperty(ref _carCount, value)) OnPropertyChanged(nameof(HasCarCount)); }
+            private set
+            {
+                if (SetProperty(ref _carCount, value))
+                {
+                    OnPropertyChanged(nameof(CarCountLabel));
+                }
+            }
         }
 
-        /// <summary>False when the consist could not be read, so the car count badge stays hidden.</summary>
-        public bool HasCarCount => _carCount.HasValue;
+        /// <summary>"42 cars", or an em dash when the consist could not be read.</summary>
+        public string CarCountLabel => _carCount.HasValue
+            ? $"{_carCount} car{(_carCount == 1 ? string.Empty : "s")}"
+            : "\u2014";
 
         /// <summary>
         /// Reads the wagon count and power type. Neither is exposed by ORTS.Menu, so the

@@ -250,7 +250,189 @@
                                        Foreground="{StaticResource PrimaryTextBrush}" />
                         </Border>
 
-                        <TextBlock Text="Activity, consist and timetable selection, and launching the simulation, arrive in later milestones."
+                        <!-- Mode switcher -->
+                        <StackPanel Orientation="Horizontal" Margin="0,22,0,0">
+                            <ToggleButton Style="{StaticResource SegmentedToggle}" Content="Activity"
+                                          IsChecked="{Binding IsActivityMode, Mode=TwoWay}" />
+                            <ToggleButton Style="{StaticResource SegmentedToggle}" Content="Explore Route"
+                                          IsChecked="{Binding IsExploreMode, Mode=TwoWay}" />
+                            <ToggleButton Style="{StaticResource SegmentedToggle}" Content="Timetables"
+                                          IsChecked="{Binding IsTimetableMode, Mode=TwoWay}" />
+                        </StackPanel>
+
+                        <!-- ==================== Activity mode ==================== -->
+                        <StackPanel Margin="0,14,0,0"
+                                    Visibility="{Binding IsActivityMode, Converter={StaticResource BoolToVis}}">
+                            <TextBlock Text="Available activities"
+                                       FontSize="11" Margin="0,0,0,6"
+                                       Foreground="{StaticResource SecondaryTextBrush}" />
+                            <ListBox ItemsSource="{Binding Activities}"
+                                     SelectedItem="{Binding SelectedActivity, Mode=TwoWay}"
+                                     ItemContainerStyle="{StaticResource RouteItemContainer}"
+                                     Background="Transparent" BorderThickness="0"
+                                     MaxHeight="440"
+                                     ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border Background="{StaticResource SurfaceBrush}"
+                                                BorderBrush="{StaticResource PanelBorderBrush}"
+                                                BorderThickness="1" CornerRadius="8" Padding="12,10">
+                                            <StackPanel>
+                                                <DockPanel>
+                                                    <Border DockPanel.Dock="Right" Margin="8,0,0,0"
+                                                            Style="{StaticResource BadgeBorder}"
+                                                            Visibility="{Binding IsExploreMode, Converter={StaticResource BoolToVis}}">
+                                                        <TextBlock Text="Explore" FontSize="10"
+                                                                   Foreground="{StaticResource AccentBrush}" />
+                                                    </Border>
+                                                    <TextBlock Text="{Binding Name}"
+                                                               FontSize="14" FontWeight="SemiBold"
+                                                               TextTrimming="CharacterEllipsis"
+                                                               Foreground="{StaticResource PrimaryTextBrush}" />
+                                                </DockPanel>
+                                                <TextBlock FontSize="11" Margin="0,4,0,0"
+                                                           Foreground="{StaticResource AccentBrush}">
+                                                    <Run Text="{Binding Difficulty, Mode=OneWay}" />
+                                                    <Run Text=" · " />
+                                                    <Run Text="{Binding Duration, Mode=OneWay}" />
+                                                    <Run Text=" · departs " />
+                                                    <Run Text="{Binding StartTime, Mode=OneWay}" />
+                                                </TextBlock>
+                                                <TextBlock Text="{Binding Description}"
+                                                           FontSize="11.5" Margin="0,6,0,0" TextWrapping="Wrap"
+                                                           Foreground="{StaticResource SecondaryTextBrush}" />
+                                                <TextBlock Text="{Binding Briefing}"
+                                                           FontSize="11.5" Margin="0,6,0,0" TextWrapping="Wrap"
+                                                           Foreground="#9AA4B2"
+                                                           Visibility="{Binding HasBriefing, Converter={StaticResource BoolToVis}}" />
+                                            </StackPanel>
+                                        </Border>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+                        </StackPanel>
+
+                        <!-- ==================== Explore route mode ==================== -->
+                        <StackPanel Margin="0,14,0,0"
+                                    Visibility="{Binding IsExploreMode, Converter={StaticResource BoolToVis}}">
+                            <TextBlock Text="Consist and lead locomotive"
+                                       FontSize="11" Margin="0,0,0,6"
+                                       Foreground="{StaticResource SecondaryTextBrush}" />
+                            <Grid>
+                                <TextBox Text="{Binding ConsistSearchText, UpdateSourceTrigger=PropertyChanged}"
+                                         ToolTip="Filter consists by name or locomotive" />
+                                <TextBlock Text="Search consists or locomotives..."
+                                           Margin="12,0,0,0"
+                                           VerticalAlignment="Center"
+                                           IsHitTestVisible="False"
+                                           Foreground="{StaticResource SecondaryTextBrush}">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="Visibility" Value="Collapsed" />
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding ConsistSearchText}" Value="">
+                                                    <Setter Property="Visibility" Value="Visible" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
+                            </Grid>
+
+                            <ListBox Margin="0,6,0,0"
+                                     ItemsSource="{Binding ConsistsView}"
+                                     SelectedItem="{Binding SelectedConsist, Mode=TwoWay}"
+                                     ItemContainerStyle="{StaticResource RouteItemContainer}"
+                                     Background="Transparent" BorderThickness="0"
+                                     MaxHeight="260"
+                                     ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border Background="{StaticResource SurfaceBrush}"
+                                                BorderBrush="{StaticResource PanelBorderBrush}"
+                                                BorderThickness="1" CornerRadius="8" Padding="12,10">
+                                            <StackPanel>
+                                                <TextBlock Text="{Binding Name}"
+                                                           FontSize="13" FontWeight="SemiBold"
+                                                           TextTrimming="CharacterEllipsis"
+                                                           Foreground="{StaticResource PrimaryTextBrush}" />
+                                                <TextBlock Text="{Binding LocomotiveName}"
+                                                           FontSize="11.5" Margin="0,4,0,0"
+                                                           TextTrimming="CharacterEllipsis"
+                                                           Foreground="{StaticResource SecondaryTextBrush}" />
+                                                <TextBlock FontSize="11" Margin="0,2,0,0"
+                                                           Foreground="{StaticResource AccentBrush}">
+                                                    <Run Text="{Binding LocomotiveType, Mode=OneWay, TargetNullValue=Unknown type}" />
+                                                    <Run Text=" · " />
+                                                    <Run Text="{Binding CarCount, Mode=OneWay, TargetNullValue=?}" />
+                                                    <Run Text=" vehicles" />
+                                                </TextBlock>
+                                            </StackPanel>
+                                        </Border>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+
+                            <TextBlock Text="Path"
+                                       FontSize="11" Margin="0,20,0,6"
+                                       Foreground="{StaticResource SecondaryTextBrush}" />
+                            <ComboBox ItemsSource="{Binding Paths}"
+                                      SelectedItem="{Binding SelectedPath, Mode=TwoWay}">
+                                <ComboBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Text="{Binding StartStation}" />
+                                            <TextBlock Text="→" Margin="6,0"
+                                                       Foreground="{StaticResource SecondaryTextBrush}" />
+                                            <TextBlock Text="{Binding EndStation}" />
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </ComboBox.ItemTemplate>
+                            </ComboBox>
+
+                            <TextBlock Text="Environment"
+                                       FontSize="11" Margin="0,20,0,6"
+                                       Foreground="{StaticResource SecondaryTextBrush}" />
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0" Margin="0,0,8,0">
+                                    <TextBlock Text="Time of day" FontSize="11" Margin="0,0,0,5"
+                                               Foreground="{StaticResource SecondaryTextBrush}" />
+                                    <TextBox Text="{Binding SelectedTime, UpdateSourceTrigger=PropertyChanged}"
+                                             ToolTip="Departure time, for example 10:00" />
+                                </StackPanel>
+                                <StackPanel Grid.Column="1" Margin="0,0,8,0">
+                                    <TextBlock Text="Season" FontSize="11" Margin="0,0,0,5"
+                                               Foreground="{StaticResource SecondaryTextBrush}" />
+                                    <ComboBox ItemsSource="{Binding Seasons}"
+                                              SelectedItem="{Binding SelectedSeason, Mode=TwoWay}" />
+                                </StackPanel>
+                                <StackPanel Grid.Column="2">
+                                    <TextBlock Text="Weather" FontSize="11" Margin="0,0,0,5"
+                                               Foreground="{StaticResource SecondaryTextBrush}" />
+                                    <ComboBox ItemsSource="{Binding Weathers}"
+                                              SelectedItem="{Binding SelectedWeather, Mode=TwoWay}" />
+                                </StackPanel>
+                            </Grid>
+                        </StackPanel>
+
+                        <!-- ==================== Timetable mode ==================== -->
+                        <StackPanel Margin="0,14,0,0"
+                                    Visibility="{Binding IsTimetableMode, Converter={StaticResource BoolToVis}}">
+                            <Border Background="{StaticResource SurfaceAltBrush}"
+                                    BorderBrush="{StaticResource PanelBorderBrush}"
+                                    BorderThickness="1" CornerRadius="8" Padding="14">
+                                <TextBlock FontSize="12" TextWrapping="Wrap"
+                                           Foreground="{StaticResource SecondaryTextBrush}"
+                                           Text="Timetable selection is not wired up yet; it arrives in a later milestone." />
+                            </Border>
+                        </StackPanel>
+
+                        <TextBlock Text="Launching the simulation arrives in a later milestone."
                                    FontSize="11" Margin="0,20,0,0" TextWrapping="Wrap"
                                    Foreground="{StaticResource SecondaryTextBrush}" />
                     </StackPanel>

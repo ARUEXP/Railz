@@ -24,6 +24,9 @@ using System.Threading.Tasks;
 using System.Windows.Data;
 using ORTS.Menu;
 using ORTS.Settings;
+using MenuPath = ORTS.Menu.Path;
+using SeasonType = Orts.Formats.Msts.SeasonType;
+using WeatherType = Orts.Formats.Msts.WeatherType;
 
 namespace Orts.Launcher.ViewModels
 {
@@ -35,12 +38,19 @@ namespace Orts.Launcher.ViewModels
     {
         UserSettings? _settings;
         bool _suppressFolderLoad;
+        bool _suppressRouteDetails;
+
+        /// <summary>Which selection panel the route detail pane shows.</summary>
+        public enum LauncherMode { Activity, Explore, Timetable }
 
         public MainViewModel()
         {
             RoutesView = CollectionViewSource.GetDefaultView(Routes);
             RoutesView.Filter = o => MatchesSearch((RouteItemViewModel)o);
             Routes.CollectionChanged += (_, __) => OnPropertyChanged(nameof(EmptyStateMessage));
+
+            ConsistsView = CollectionViewSource.GetDefaultView(Consists);
+            ConsistsView.Filter = o => MatchesConsistSearch((ConsistItemViewModel)o);
         }
 
         public ObservableCollection<FolderItemViewModel> Folders { get; } = new ObservableCollection<FolderItemViewModel>();
@@ -49,6 +59,99 @@ namespace Orts.Launcher.ViewModels
 
         /// <summary>Searchable/filterable view over <see cref="Routes"/>.</summary>
         public ICollectionView RoutesView { get; }
+
+        public ObservableCollection<ActivityItemViewModel> Activities { get; } = new ObservableCollection<ActivityItemViewModel>();
+
+        public ObservableCollection<ConsistItemViewModel> Consists { get; } = new ObservableCollection<ConsistItemViewModel>();
+
+        public ObservableCollection<PathItemViewModel> Paths { get; } = new ObservableCollection<PathItemViewModel>();
+
+        /// <summary>Searchable/filterable view over <see cref="Consists"/>.</summary>
+        public ICollectionView ConsistsView { get; }
+
+        ActivityItemViewModel? _selectedActivity;
+        public ActivityItemViewModel? SelectedActivity
+        {
+            get => _selectedActivity;
+            set { if (SetProperty(ref _selectedActivity, value)) PersistSelection(); }
+        }
+
+        ConsistItemViewModel? _selectedConsist;
+        public ConsistItemViewModel? SelectedConsist
+        {
+            get => _selectedConsist;
+            set { if (SetProperty(ref _selectedConsist, value)) PersistSelection(); }
+        }
+
+        PathItemViewModel? _selectedPath;
+        public PathItemViewModel? SelectedPath
+        {
+            get => _selectedPath;
+            set { if (SetProperty(ref _selectedPath, value)) PersistSelection(); }
+        }
+
+        LauncherMode _mode = LauncherMode.Activity;
+
+        public bool IsActivityMode
+        {
+            get => _mode == LauncherMode.Activity;
+            set => SetMode(value, LauncherMode.Activity);
+        }
+
+        public bool IsExploreMode
+        {
+            get => _mode == LauncherMode.Explore;
+            set => SetMode(value, LauncherMode.Explore);
+        }
+
+        public bool IsTimetableMode
+        {
+            get => _mode == LauncherMode.Timetable;
+            set => SetMode(value, LauncherMode.Timetable);
+        }
+
+        void SetMode(bool requested, LauncherMode mode)
+        {
+            // A segmented button can select a mode, but must never clear the active one.
+            if (requested && _mode != mode)
+                _mode = mode;
+
+            OnPropertyChanged(nameof(IsActivityMode));
+            OnPropertyChanged(nameof(IsExploreMode));
+            OnPropertyChanged(nameof(IsTimetableMode));
+        }
+
+        string _selectedTime = "10:00";
+        public string SelectedTime
+        {
+            get => _selectedTime;
+            set { if (SetProperty(ref _selectedTime, value ?? string.Empty)) PersistSelection(); }
+        }
+
+        SeasonType _selectedSeason = SeasonType.Summer;
+        public SeasonType SelectedSeason
+        {
+            get => _selectedSeason;
+            set { if (SetProperty(ref _selectedSeason, value)) PersistSelection(); }
+        }
+
+        WeatherType _selectedWeather = WeatherType.Clear;
+        public WeatherType SelectedWeather
+        {
+            get => _selectedWeather;
+            set { if (SetProperty(ref _selectedWeather, value)) PersistSelection(); }
+        }
+
+        public IReadOnlyList<SeasonType> Seasons { get; } = Enum.GetValues<SeasonType>();
+
+        public IReadOnlyList<WeatherType> Weathers { get; } = Enum.GetValues<WeatherType>();
+
+        string _consistSearchText = string.Empty;
+        public string ConsistSearchText
+        {
+            get => _consistSearchText;
+            set { if (SetProperty(ref _consistSearchText, value ?? string.Empty)) ConsistsView.Refresh(); }
+        }
 
         FolderItemViewModel? _selectedFolder;
         public FolderItemViewModel? SelectedFolder
@@ -72,11 +175,19 @@ namespace Orts.Launcher.ViewModels
             get => _selectedRoute;
             set
             {
-                if (SetProperty(ref _selectedRoute, value))
-                {
-                    PersistSelection();
-                    OnPropertyChanged(nameof(ShowEmptyState));
-                }
+                if (!SetProperty(ref _selectedRoute, value))
+                    return;
+
+                PersistSelection();
+                OnPropertyChanged(nameof(ShowEmptyState));
+
+                if (_suppressRouteDetails)
+                    return;
+
+                if (value != null)
+                    _ = LoadRouteDetailsAsync(value);
+                else
+                    ClearRouteDetails();
             }
         }
 
@@ -130,6 +241,7 @@ namespace Orts.Launcher.ViewModels
             try
             {
                 _settings = await Task.Run(() => new UserSettings(Array.Empty<string>()));
+                _startupSelection = (_settings.Menu_Selection ?? Array.Empty<string>()).ToArray();
 
                 var folders = await Task.Run(() => Folder.GetFolders(_settings)
                     .OrderBy(f => f.Name, StringComparer.CurrentCultureIgnoreCase)
@@ -195,8 +307,17 @@ namespace Orts.Launcher.ViewModels
                     : $"{Routes.Count} route(s) discovered.";
 
                 var lastRoute = preferredRoutePath ?? LastSelection(UserSettings.Menu_SelectionIndex.Route);
-                SelectedRoute = Routes.FirstOrDefault(r => string.Equals(r.FolderPath, lastRoute, StringComparison.OrdinalIgnoreCase))
+                var chosen = Routes.FirstOrDefault(r => string.Equals(r.FolderPath, lastRoute, StringComparison.OrdinalIgnoreCase))
                     ?? Routes.FirstOrDefault();
+
+                _suppressRouteDetails = true;
+                SelectedRoute = chosen;
+                _suppressRouteDetails = false;
+
+                if (chosen != null)
+                    await LoadRouteDetailsAsync(chosen);
+                else
+                    ClearRouteDetails();
             }
             catch (Exception ex)
             {
@@ -206,6 +327,108 @@ namespace Orts.Launcher.ViewModels
             {
                 IsLoading = false;
             }
+        }
+
+        /// <summary>
+        /// Loads the activities, paths and consists of a route. All parsing runs on a background thread;
+        /// the bound collections are only touched on the UI thread.
+        /// </summary>
+        public async Task LoadRouteDetailsAsync(RouteItemViewModel route)
+        {
+            var folder = route.Folder;
+            IsLoading = true;
+            StatusMessage = $"Loading activities, consists and paths for \u201c{route.Name}\u201d\u2026";
+
+            try
+            {
+                var loaded = await Task.Run(() =>
+                {
+                    var activities = Activity.GetActivities(folder, route.Route)
+                        .Select(a => new ActivityItemViewModel(a))
+                        .ToList();
+
+                    var paths = MenuPath.GetPaths(route.Route, false)
+                        .Select(p => new PathItemViewModel(p))
+                        .OrderBy(p => p.Name, StringComparer.CurrentCultureIgnoreCase)
+                        .ToList();
+
+                    var consists = Consist.GetConsists(folder)
+                        .Select(c => new ConsistItemViewModel(c))
+                        .OrderBy(c => c.Name, StringComparer.CurrentCultureIgnoreCase)
+                        .ToList();
+
+                    foreach (var consist in consists)
+                        consist.LoadDetails();
+
+                    return (activities, paths, consists);
+                });
+
+                // A later selection may have superseded this load while it was running.
+                if (!ReferenceEquals(_selectedRoute, route))
+                    return;
+
+                SelectedActivity = null;
+                SelectedConsist = null;
+                SelectedPath = null;
+                Replace(Activities, loaded.activities);
+                Replace(Paths, loaded.paths);
+                Replace(Consists, loaded.consists);
+
+                RestoreRouteDetailSelections();
+
+                StatusMessage = $"{Activities.Count} activities, {Paths.Count} paths, {Consists.Count} consists.";
+            }
+            catch (Exception ex)
+            {
+                StatusMessage = "Failed to load route details: " + ex.Message;
+            }
+            finally
+            {
+                IsLoading = false;
+            }
+        }
+
+        void ClearRouteDetails()
+        {
+            SelectedActivity = null;
+            SelectedConsist = null;
+            SelectedPath = null;
+            Activities.Clear();
+            Paths.Clear();
+            Consists.Clear();
+        }
+
+        /// <summary>Re-applies the stored activity / consist / path / environment choices for the current route.</summary>
+        void RestoreRouteDetailSelections()
+        {
+            var activity = LastSelection(UserSettings.Menu_SelectionIndex.Activity);
+            SelectedActivity = Activities.FirstOrDefault(a => string.Equals(a.Key, activity, StringComparison.OrdinalIgnoreCase))
+                ?? Activities.FirstOrDefault();
+
+            var consistPath = LastSelection(UserSettings.Menu_SelectionIndex.Consist);
+            SelectedConsist = Consists.FirstOrDefault(c => string.Equals(c.FilePath, consistPath, StringComparison.OrdinalIgnoreCase))
+                ?? Consists.FirstOrDefault();
+
+            var pathPath = LastSelection(UserSettings.Menu_SelectionIndex.Path);
+            SelectedPath = Paths.FirstOrDefault(p => string.Equals(p.FilePath, pathPath, StringComparison.OrdinalIgnoreCase))
+                ?? Paths.FirstOrDefault();
+
+            var time = LastSelection(UserSettings.Menu_SelectionIndex.Time);
+            if (!string.IsNullOrWhiteSpace(time))
+                SelectedTime = time;
+
+            if (Enum.TryParse<SeasonType>(LastSelection(UserSettings.Menu_SelectionIndex.Season), out var season))
+                SelectedSeason = season;
+
+            if (Enum.TryParse<WeatherType>(LastSelection(UserSettings.Menu_SelectionIndex.Weather), out var weather))
+                SelectedWeather = weather;
+        }
+
+        static void Replace<T>(ObservableCollection<T> target, IList<T> source)
+        {
+            target.Clear();
+            foreach (var item in source)
+                target.Add(item);
         }
 
         /// <summary>
@@ -272,11 +495,26 @@ namespace Orts.Launcher.ViewModels
                 || (route.Description?.IndexOf(SearchText, StringComparison.OrdinalIgnoreCase) >= 0);
         }
 
+        bool MatchesConsistSearch(ConsistItemViewModel consist)
+        {
+            if (string.IsNullOrWhiteSpace(ConsistSearchText))
+                return true;
+
+            return (consist.Name?.IndexOf(ConsistSearchText, StringComparison.OrdinalIgnoreCase) >= 0)
+                || (consist.LocomotiveName?.IndexOf(ConsistSearchText, StringComparison.OrdinalIgnoreCase) >= 0);
+        }
+
+        /// <summary>Stored selections as they were when the launcher started.</summary>
+        /// <remarks>
+        /// PersistSelection writes the current UI state back over Menu_Selection, which happens while a
+        /// route is still being restored. Restoring must therefore read the startup values, not the live array.
+        /// </remarks>
+        string[] _startupSelection = Array.Empty<string>();
+
         string? LastSelection(UserSettings.Menu_SelectionIndex index)
         {
-            var selection = _settings?.Menu_Selection;
             var i = (int)index;
-            return selection != null && selection.Length > i ? selection[i] : null;
+            return i < _startupSelection.Length ? _startupSelection[i] : null;
         }
 
         void PersistSelection()
@@ -285,10 +523,17 @@ namespace Orts.Launcher.ViewModels
                 return;
 
             var current = _settings.Menu_Selection ?? Array.Empty<string>();
-            var updated = new string[Math.Max(current.Length, 2)];
+            var updated = new string[Math.Max(current.Length, 9)];
             Array.Copy(current, updated, current.Length);
             updated[(int)UserSettings.Menu_SelectionIndex.Folder] = _selectedFolder?.Path ?? string.Empty;
             updated[(int)UserSettings.Menu_SelectionIndex.Route] = _selectedRoute?.FolderPath ?? string.Empty;
+            updated[(int)UserSettings.Menu_SelectionIndex.Activity] = _selectedActivity?.Key ?? string.Empty;
+            updated[(int)UserSettings.Menu_SelectionIndex.Locomotive] = _selectedConsist?.LocomotivePath ?? string.Empty;
+            updated[(int)UserSettings.Menu_SelectionIndex.Consist] = _selectedConsist?.FilePath ?? string.Empty;
+            updated[(int)UserSettings.Menu_SelectionIndex.Path] = _selectedPath?.FilePath ?? string.Empty;
+            updated[(int)UserSettings.Menu_SelectionIndex.Time] = _selectedTime;
+            updated[(int)UserSettings.Menu_SelectionIndex.Season] = _selectedSeason.ToString();
+            updated[(int)UserSettings.Menu_SelectionIndex.Weather] = _selectedWeather.ToString();
             _settings.Menu_Selection = updated;
 
             var settings = _settings;

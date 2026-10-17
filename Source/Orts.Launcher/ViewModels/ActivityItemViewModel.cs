@@ -45,16 +45,13 @@ namespace Orts.Launcher.ViewModels
 
         public string Difficulty => Activity.Difficulty.ToString();
 
-        public string StartTime => Activity.StartTime?.FormattedStartTime() ?? "10:00:00";
+        public string StartTime => Activity.StartTime?.FormattedStartTime() ?? "12:00:00";
 
         public SeasonType Season => Activity.Season;
 
         public WeatherType Weather => Activity.Weather;
 
-        /// <summary>True for the synthetic "- Explore Route -" / "+ Explore in Activity Mode +" entries.</summary>
-        public bool IsExploreMode => Activity is ExploreActivity;
-
-        /// <summary>Activity file path, or null for the synthetic explore entries.</summary>
+        /// <summary>Activity file path, or null for a missing activity.</summary>
         public string? FilePath => Activity.FilePath;
 
         /// <summary>Stable identity used for selection persistence.</summary>

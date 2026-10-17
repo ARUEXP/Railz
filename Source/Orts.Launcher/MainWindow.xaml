@@ -51,6 +51,53 @@
             <Setter Property="Padding" Value="10,3" />
             <Setter Property="Margin" Value="0,0,8,0" />
         </Style>
+
+        <Style x:Key="SectionLabel" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="Margin" Value="0,0,0,6" />
+            <Setter Property="Foreground" Value="{StaticResource SecondaryTextBrush}" />
+        </Style>
+
+        <Style x:Key="CardBorder" TargetType="Border">
+            <Setter Property="Background" Value="{StaticResource SurfaceAltBrush}" />
+            <Setter Property="BorderBrush" Value="{StaticResource PanelBorderBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="10" />
+            <Setter Property="Padding" Value="16" />
+            <Setter Property="Margin" Value="0,0,0,14" />
+        </Style>
+
+        <!-- A ListBox used as a radio group: this is the pill look for the environment choices. -->
+        <Style x:Key="PillItemContainer" TargetType="ListBoxItem">
+            <Setter Property="Foreground" Value="{StaticResource SecondaryTextBrush}" />
+            <Setter Property="Margin" Value="0,0,6,0" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="SnapsToDevicePixels" Value="True" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ListBoxItem">
+                        <Border x:Name="Bd"
+                                Background="{StaticResource SurfaceBrush}"
+                                BorderBrush="{StaticResource PanelBorderBrush}"
+                                BorderThickness="1"
+                                CornerRadius="16"
+                                Padding="12,5">
+                            <ContentPresenter />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{StaticResource PanelBorderBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{StaticResource AccentHoverBrush}" />
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="{StaticResource AccentHoverBrush}" />
+                                <Setter Property="Foreground" Value="#FFFFFF" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
     </Window.Resources>
 
     <Grid>
@@ -91,7 +138,7 @@
                     Padding="16">
                 <DockPanel>
                     <StackPanel DockPanel.Dock="Top" Margin="0,0,0,12">
-                        <TextBlock Text="Installation Profile"
+                        <TextBlock Text="Game Library"
                                    FontSize="11" Margin="0,0,0,5"
                                    Foreground="{StaticResource SecondaryTextBrush}" />
                         <Grid Margin="0,0,0,12">
@@ -107,10 +154,10 @@
                             <Button Grid.Column="1" Content="+" Width="34" Margin="6,0,0,0"
                                     Padding="0" FontSize="16"
                                     Click="AddFolder_Click"
-                                    ToolTip="Add an MSTS / Open Rails content folder" />
+                                    ToolTip="Add a game library folder (the one containing ROUTES and TRAINS)" />
                         </Grid>
 
-                        <TextBlock Text="Routes"
+                        <TextBlock Text="Choose a Route"
                                    FontSize="11" Margin="0,0,0,5"
                                    Foreground="{StaticResource SecondaryTextBrush}" />
                         <Grid>
@@ -196,6 +243,7 @@
                     </ScrollViewer.Style>
                     <StackPanel MaxWidth="820" HorizontalAlignment="Left">
                         <!-- Hero artwork / themed fallback banner -->
+                        <TextBlock Text="Your Route" Style="{StaticResource SectionLabel}" Margin="0,0,0,6" />
                         <Border Height="220" CornerRadius="10"
                                 BorderBrush="{StaticResource PanelBorderBrush}"
                                 BorderThickness="1"
@@ -231,15 +279,15 @@
                         <StackPanel Orientation="Horizontal" Margin="0,16,0,0">
                             <Border Style="{StaticResource BadgeBorder}">
                                 <TextBlock FontSize="12"
-                                           Text="{Binding SelectedRoute.PathCount, StringFormat={}{0} paths discovered, TargetNullValue=Scanning paths…}" />
+                                           Text="{Binding SelectedRoute.PathCount, StringFormat={}{0} starting places, TargetNullValue=Looking for places…}" />
                             </Border>
                             <Border Style="{StaticResource BadgeBorder}">
                                 <TextBlock FontSize="12"
-                                           Text="{Binding SelectedRoute.ActivityCount, StringFormat={}{0} activities discovered, TargetNullValue=Scanning activities…}" />
+                                           Text="{Binding SelectedRoute.ActivityCount, StringFormat={}{0} missions, TargetNullValue=Looking for missions…}" />
                             </Border>
                         </StackPanel>
 
-                        <TextBlock Text="Description"
+                        <TextBlock Text="About this route"
                                    FontSize="11" Margin="0,22,0,6"
                                    Foreground="{StaticResource SecondaryTextBrush}" />
                         <Border Background="{StaticResource SurfaceAltBrush}"
@@ -252,20 +300,213 @@
 
                         <!-- Mode switcher -->
                         <StackPanel Orientation="Horizontal" Margin="0,22,0,0">
-                            <ToggleButton Style="{StaticResource SegmentedToggle}" Content="Activity"
+                            <ToggleButton Style="{StaticResource SegmentedToggle}" Content="Quick Drive"
+                                          IsChecked="{Binding IsQuickDriveMode, Mode=TwoWay}" />
+                            <ToggleButton Style="{StaticResource SegmentedToggle}" Content="Missions"
                                           IsChecked="{Binding IsActivityMode, Mode=TwoWay}" />
-                            <ToggleButton Style="{StaticResource SegmentedToggle}" Content="Explore Route"
-                                          IsChecked="{Binding IsExploreMode, Mode=TwoWay}" />
                             <ToggleButton Style="{StaticResource SegmentedToggle}" Content="Timetables"
                                           IsChecked="{Binding IsTimetableMode, Mode=TwoWay}" />
                         </StackPanel>
 
-                        <!-- ==================== Activity mode ==================== -->
-                        <StackPanel Margin="0,14,0,0"
+                        <!-- ==================== Quick Drive ==================== -->
+                        <StackPanel Visibility="{Binding IsQuickDriveMode, Converter={StaticResource BoolToVis}}">
+
+                            <!-- Card 2: the train -->
+                            <Border Style="{StaticResource CardBorder}" Margin="0,18,0,14">
+                                <StackPanel>
+                                    <DockPanel>
+                                        <Border DockPanel.Dock="Right" Style="{StaticResource BadgeBorder}"
+                                                VerticalAlignment="Center">
+                                            <TextBlock FontSize="11" Foreground="{StaticResource AccentBrush}">
+                                                <Run Text="{Binding SelectedConsist.CarCount, Mode=OneWay, TargetNullValue=?}" />
+                                                <Run Text=" cars" />
+                                            </TextBlock>
+                                        </Border>
+                                        <TextBlock Text="Your Train" FontSize="13" FontWeight="SemiBold"
+                                                   VerticalAlignment="Center"
+                                                   Foreground="{StaticResource PrimaryTextBrush}" />
+                                    </DockPanel>
+
+                                    <TextBlock FontSize="17" FontWeight="SemiBold" Margin="0,8,0,0"
+                                               TextTrimming="CharacterEllipsis"
+                                               Foreground="{StaticResource AccentBrush}"
+                                               Text="{Binding SelectedConsist.LocomotiveName, FallbackValue=No train selected yet, TargetNullValue=No train selected yet}" />
+                                    <TextBlock FontSize="11.5" Margin="0,2,0,0"
+                                               TextTrimming="CharacterEllipsis"
+                                               Foreground="{StaticResource SecondaryTextBrush}"
+                                               Text="{Binding SelectedConsist.Name, FallbackValue=—, TargetNullValue=—}" />
+
+                                    <TextBlock Text="Search or pick another train" Style="{StaticResource SectionLabel}"
+                                               Margin="0,14,0,6" />
+                                    <Grid>
+                                        <TextBox Text="{Binding ConsistSearchText, UpdateSourceTrigger=PropertyChanged}"
+                                                 ToolTip="Filter trains by name or locomotive" />
+                                        <TextBlock Text="Search trains..."
+                                                   Margin="12,0,0,0"
+                                                   VerticalAlignment="Center"
+                                                   IsHitTestVisible="False"
+                                                   Foreground="{StaticResource SecondaryTextBrush}">
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock">
+                                                    <Setter Property="Visibility" Value="Collapsed" />
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding ConsistSearchText}" Value="">
+                                                            <Setter Property="Visibility" Value="Visible" />
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
+                                    </Grid>
+
+                                    <ListBox Margin="0,8,0,0"
+                                             ItemsSource="{Binding ConsistsView}"
+                                             SelectedItem="{Binding SelectedConsist, Mode=TwoWay}"
+                                             ItemContainerStyle="{StaticResource RouteItemContainer}"
+                                             Background="Transparent" BorderThickness="0"
+                                             MaxHeight="240"
+                                             ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                                        <ListBox.ItemTemplate>
+                                            <DataTemplate>
+                                                <Border Background="{StaticResource SurfaceBrush}"
+                                                        BorderBrush="{StaticResource PanelBorderBrush}"
+                                                        BorderThickness="1" CornerRadius="8" Padding="12,10">
+                                                    <StackPanel>
+                                                        <TextBlock Text="{Binding LocomotiveName}"
+                                                                   FontSize="13" FontWeight="SemiBold"
+                                                                   TextTrimming="CharacterEllipsis"
+                                                                   Foreground="{StaticResource PrimaryTextBrush}" />
+                                                        <TextBlock Text="{Binding Name}"
+                                                                   FontSize="11" Margin="0,3,0,0"
+                                                                   TextTrimming="CharacterEllipsis"
+                                                                   Foreground="{StaticResource SecondaryTextBrush}" />
+                                                        <TextBlock FontSize="11" Margin="0,3,0,0"
+                                                                   Foreground="{StaticResource AccentBrush}">
+                                                            <Run Text="{Binding LocomotiveType, Mode=OneWay, TargetNullValue=Unknown type}" />
+                                                            <Run Text=" · " />
+                                                            <Run Text="{Binding CarCount, Mode=OneWay, TargetNullValue=?}" />
+                                                            <Run Text=" cars" />
+                                                        </TextBlock>
+                                                    </StackPanel>
+                                                </Border>
+                                            </DataTemplate>
+                                        </ListBox.ItemTemplate>
+                                    </ListBox>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Card 3: where the drive begins -->
+                            <Border Style="{StaticResource CardBorder}">
+                                <StackPanel>
+                                    <TextBlock Text="Starting Location" FontSize="13" FontWeight="SemiBold"
+                                               Foreground="{StaticResource PrimaryTextBrush}" />
+                                    <TextBlock Text="Where your drive begins and ends."
+                                               FontSize="11" Margin="0,2,0,10"
+                                               Foreground="{StaticResource SecondaryTextBrush}" />
+                                    <ComboBox ItemsSource="{Binding Paths}"
+                                              SelectedItem="{Binding SelectedPath, Mode=TwoWay}">
+                                        <ComboBox.ItemTemplate>
+                                            <DataTemplate>
+                                                <StackPanel Orientation="Horizontal">
+                                                    <TextBlock Text="From" FontSize="11"
+                                                               VerticalAlignment="Center"
+                                                               Foreground="{StaticResource SecondaryTextBrush}" />
+                                                    <TextBlock Text="{Binding StartStation}" Margin="6,0,0,0" />
+                                                    <TextBlock Text="→" Margin="8,0"
+                                                               Foreground="{StaticResource SecondaryTextBrush}" />
+                                                    <TextBlock Text="To" FontSize="11"
+                                                               VerticalAlignment="Center"
+                                                               Foreground="{StaticResource SecondaryTextBrush}" />
+                                                    <TextBlock Text="{Binding EndStation}" Margin="6,0,0,0" />
+                                                </StackPanel>
+                                            </DataTemplate>
+                                        </ComboBox.ItemTemplate>
+                                    </ComboBox>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Card 4: environment -->
+                            <Border Style="{StaticResource CardBorder}">
+                                <StackPanel>
+                                    <TextBlock Text="Time &amp; Weather" FontSize="13" FontWeight="SemiBold"
+                                               Foreground="{StaticResource PrimaryTextBrush}" />
+
+                                    <TextBlock Text="Time of day" Style="{StaticResource SectionLabel}" Margin="0,14,0,6" />
+                                    <ListBox ItemsSource="{Binding TimeOptions}"
+                                             SelectedItem="{Binding SelectedTimeOption, Mode=TwoWay}"
+                                             ItemContainerStyle="{StaticResource PillItemContainer}"
+                                             Background="Transparent" BorderThickness="0"
+                                             HorizontalAlignment="Left"
+                                             ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                                        <ListBox.ItemsPanel>
+                                            <ItemsPanelTemplate>
+                                                <StackPanel Orientation="Horizontal" />
+                                            </ItemsPanelTemplate>
+                                        </ListBox.ItemsPanel>
+                                        <ListBox.ItemTemplate>
+                                            <DataTemplate>
+                                                <TextBlock>
+                                                    <Run Text="{Binding Icon, Mode=OneWay}" />
+                                                    <Run Text="  " />
+                                                    <Run Text="{Binding Label, Mode=OneWay}" />
+                                                </TextBlock>
+                                            </DataTemplate>
+                                        </ListBox.ItemTemplate>
+                                    </ListBox>
+
+                                    <TextBlock Text="Weather" Style="{StaticResource SectionLabel}" Margin="0,14,0,6" />
+                                    <ListBox ItemsSource="{Binding WeatherOptions}"
+                                             SelectedItem="{Binding SelectedWeatherOption, Mode=TwoWay}"
+                                             ItemContainerStyle="{StaticResource PillItemContainer}"
+                                             Background="Transparent" BorderThickness="0"
+                                             HorizontalAlignment="Left"
+                                             ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                                        <ListBox.ItemsPanel>
+                                            <ItemsPanelTemplate>
+                                                <StackPanel Orientation="Horizontal" />
+                                            </ItemsPanelTemplate>
+                                        </ListBox.ItemsPanel>
+                                        <ListBox.ItemTemplate>
+                                            <DataTemplate>
+                                                <TextBlock>
+                                                    <Run Text="{Binding Icon, Mode=OneWay}" />
+                                                    <Run Text="  " />
+                                                    <Run Text="{Binding Label, Mode=OneWay}" />
+                                                </TextBlock>
+                                            </DataTemplate>
+                                        </ListBox.ItemTemplate>
+                                    </ListBox>
+
+                                    <TextBlock Text="Season" Style="{StaticResource SectionLabel}" Margin="0,14,0,6" />
+                                    <ListBox ItemsSource="{Binding SeasonOptions}"
+                                             SelectedItem="{Binding SelectedSeasonOption, Mode=TwoWay}"
+                                             ItemContainerStyle="{StaticResource PillItemContainer}"
+                                             Background="Transparent" BorderThickness="0"
+                                             HorizontalAlignment="Left"
+                                             ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                                        <ListBox.ItemsPanel>
+                                            <ItemsPanelTemplate>
+                                                <StackPanel Orientation="Horizontal" />
+                                            </ItemsPanelTemplate>
+                                        </ListBox.ItemsPanel>
+                                        <ListBox.ItemTemplate>
+                                            <DataTemplate>
+                                                <TextBlock>
+                                                    <Run Text="{Binding Icon, Mode=OneWay}" />
+                                                    <Run Text="  " />
+                                                    <Run Text="{Binding Label, Mode=OneWay}" />
+                                                </TextBlock>
+                                            </DataTemplate>
+                                        </ListBox.ItemTemplate>
+                                    </ListBox>
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+
+                        <!-- ==================== Missions ==================== -->
+                        <StackPanel Margin="0,18,0,0"
                                     Visibility="{Binding IsActivityMode, Converter={StaticResource BoolToVis}}">
-                            <TextBlock Text="Available activities"
-                                       FontSize="11" Margin="0,0,0,6"
-                                       Foreground="{StaticResource SecondaryTextBrush}" />
+                            <TextBlock Text="Available missions" Style="{StaticResource SectionLabel}" />
                             <ListBox ItemsSource="{Binding Activities}"
                                      SelectedItem="{Binding SelectedActivity, Mode=TwoWay}"
                                      ItemContainerStyle="{StaticResource RouteItemContainer}"
@@ -278,18 +519,10 @@
                                                 BorderBrush="{StaticResource PanelBorderBrush}"
                                                 BorderThickness="1" CornerRadius="8" Padding="12,10">
                                             <StackPanel>
-                                                <DockPanel>
-                                                    <Border DockPanel.Dock="Right" Margin="8,0,0,0"
-                                                            Style="{StaticResource BadgeBorder}"
-                                                            Visibility="{Binding IsExploreMode, Converter={StaticResource BoolToVis}}">
-                                                        <TextBlock Text="Explore" FontSize="10"
-                                                                   Foreground="{StaticResource AccentBrush}" />
-                                                    </Border>
-                                                    <TextBlock Text="{Binding Name}"
-                                                               FontSize="14" FontWeight="SemiBold"
-                                                               TextTrimming="CharacterEllipsis"
-                                                               Foreground="{StaticResource PrimaryTextBrush}" />
-                                                </DockPanel>
+                                                <TextBlock Text="{Binding Name}"
+                                                           FontSize="14" FontWeight="SemiBold"
+                                                           TextTrimming="CharacterEllipsis"
+                                                           Foreground="{StaticResource PrimaryTextBrush}" />
                                                 <TextBlock FontSize="11" Margin="0,4,0,0"
                                                            Foreground="{StaticResource AccentBrush}">
                                                     <Run Text="{Binding Difficulty, Mode=OneWay}" />
@@ -312,129 +545,55 @@
                             </ListBox>
                         </StackPanel>
 
-                        <!-- ==================== Explore route mode ==================== -->
-                        <StackPanel Margin="0,14,0,0"
-                                    Visibility="{Binding IsExploreMode, Converter={StaticResource BoolToVis}}">
-                            <TextBlock Text="Consist and lead locomotive"
-                                       FontSize="11" Margin="0,0,0,6"
-                                       Foreground="{StaticResource SecondaryTextBrush}" />
-                            <Grid>
-                                <TextBox Text="{Binding ConsistSearchText, UpdateSourceTrigger=PropertyChanged}"
-                                         ToolTip="Filter consists by name or locomotive" />
-                                <TextBlock Text="Search consists or locomotives..."
-                                           Margin="12,0,0,0"
-                                           VerticalAlignment="Center"
-                                           IsHitTestVisible="False"
-                                           Foreground="{StaticResource SecondaryTextBrush}">
-                                    <TextBlock.Style>
-                                        <Style TargetType="TextBlock">
-                                            <Setter Property="Visibility" Value="Collapsed" />
-                                            <Style.Triggers>
-                                                <DataTrigger Binding="{Binding ConsistSearchText}" Value="">
-                                                    <Setter Property="Visibility" Value="Visible" />
-                                                </DataTrigger>
-                                            </Style.Triggers>
-                                        </Style>
-                                    </TextBlock.Style>
-                                </TextBlock>
-                            </Grid>
-
-                            <ListBox Margin="0,6,0,0"
-                                     ItemsSource="{Binding ConsistsView}"
-                                     SelectedItem="{Binding SelectedConsist, Mode=TwoWay}"
-                                     ItemContainerStyle="{StaticResource RouteItemContainer}"
-                                     Background="Transparent" BorderThickness="0"
-                                     MaxHeight="260"
-                                     ScrollViewer.HorizontalScrollBarVisibility="Disabled">
-                                <ListBox.ItemTemplate>
-                                    <DataTemplate>
-                                        <Border Background="{StaticResource SurfaceBrush}"
-                                                BorderBrush="{StaticResource PanelBorderBrush}"
-                                                BorderThickness="1" CornerRadius="8" Padding="12,10">
-                                            <StackPanel>
-                                                <TextBlock Text="{Binding Name}"
-                                                           FontSize="13" FontWeight="SemiBold"
-                                                           TextTrimming="CharacterEllipsis"
-                                                           Foreground="{StaticResource PrimaryTextBrush}" />
-                                                <TextBlock Text="{Binding LocomotiveName}"
-                                                           FontSize="11.5" Margin="0,4,0,0"
-                                                           TextTrimming="CharacterEllipsis"
-                                                           Foreground="{StaticResource SecondaryTextBrush}" />
-                                                <TextBlock FontSize="11" Margin="0,2,0,0"
-                                                           Foreground="{StaticResource AccentBrush}">
-                                                    <Run Text="{Binding LocomotiveType, Mode=OneWay, TargetNullValue=Unknown type}" />
-                                                    <Run Text=" · " />
-                                                    <Run Text="{Binding CarCount, Mode=OneWay, TargetNullValue=?}" />
-                                                    <Run Text=" vehicles" />
-                                                </TextBlock>
-                                            </StackPanel>
-                                        </Border>
-                                    </DataTemplate>
-                                </ListBox.ItemTemplate>
-                            </ListBox>
-
-                            <TextBlock Text="Path"
-                                       FontSize="11" Margin="0,20,0,6"
-                                       Foreground="{StaticResource SecondaryTextBrush}" />
-                            <ComboBox ItemsSource="{Binding Paths}"
-                                      SelectedItem="{Binding SelectedPath, Mode=TwoWay}">
-                                <ComboBox.ItemTemplate>
-                                    <DataTemplate>
-                                        <StackPanel Orientation="Horizontal">
-                                            <TextBlock Text="{Binding StartStation}" />
-                                            <TextBlock Text="→" Margin="6,0"
-                                                       Foreground="{StaticResource SecondaryTextBrush}" />
-                                            <TextBlock Text="{Binding EndStation}" />
-                                        </StackPanel>
-                                    </DataTemplate>
-                                </ComboBox.ItemTemplate>
-                            </ComboBox>
-
-                            <TextBlock Text="Environment"
-                                       FontSize="11" Margin="0,20,0,6"
-                                       Foreground="{StaticResource SecondaryTextBrush}" />
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="*" />
-                                </Grid.ColumnDefinitions>
-                                <StackPanel Grid.Column="0" Margin="0,0,8,0">
-                                    <TextBlock Text="Time of day" FontSize="11" Margin="0,0,0,5"
-                                               Foreground="{StaticResource SecondaryTextBrush}" />
-                                    <TextBox Text="{Binding SelectedTime, UpdateSourceTrigger=PropertyChanged}"
-                                             ToolTip="Departure time, for example 10:00" />
-                                </StackPanel>
-                                <StackPanel Grid.Column="1" Margin="0,0,8,0">
-                                    <TextBlock Text="Season" FontSize="11" Margin="0,0,0,5"
-                                               Foreground="{StaticResource SecondaryTextBrush}" />
-                                    <ComboBox ItemsSource="{Binding Seasons}"
-                                              SelectedItem="{Binding SelectedSeason, Mode=TwoWay}" />
-                                </StackPanel>
-                                <StackPanel Grid.Column="2">
-                                    <TextBlock Text="Weather" FontSize="11" Margin="0,0,0,5"
-                                               Foreground="{StaticResource SecondaryTextBrush}" />
-                                    <ComboBox ItemsSource="{Binding Weathers}"
-                                              SelectedItem="{Binding SelectedWeather, Mode=TwoWay}" />
-                                </StackPanel>
-                            </Grid>
-                        </StackPanel>
-
                         <!-- ==================== Timetable mode ==================== -->
-                        <StackPanel Margin="0,14,0,0"
+                        <StackPanel Margin="0,18,0,0"
                                     Visibility="{Binding IsTimetableMode, Converter={StaticResource BoolToVis}}">
-                            <Border Background="{StaticResource SurfaceAltBrush}"
-                                    BorderBrush="{StaticResource PanelBorderBrush}"
-                                    BorderThickness="1" CornerRadius="8" Padding="14">
+                            <Border Style="{StaticResource CardBorder}">
                                 <TextBlock FontSize="12" TextWrapping="Wrap"
                                            Foreground="{StaticResource SecondaryTextBrush}"
-                                           Text="Timetable selection is not wired up yet; it arrives in a later milestone." />
+                                           Text="Timetables are not wired up yet; they arrive in a later milestone." />
                             </Border>
                         </StackPanel>
 
-                        <TextBlock Text="Launching the simulation arrives in a later milestone."
-                                   FontSize="11" Margin="0,20,0,0" TextWrapping="Wrap"
-                                   Foreground="{StaticResource SecondaryTextBrush}" />
+                        <!-- ==================== Launch ==================== -->
+                        <StackPanel Margin="0,6,0,0">
+                            <StackPanel.Style>
+                                <Style TargetType="StackPanel">
+                                    <Setter Property="Visibility" Value="Visible" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsTimetableMode}" Value="True">
+                                            <Setter Property="Visibility" Value="Collapsed" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </StackPanel.Style>
+
+                            <Button Style="{StaticResource PrimaryActionButton}"
+                                    Content="{Binding LaunchButtonLabel}"
+                                    Click="DriveNow_Click"
+                                    HorizontalAlignment="Stretch" />
+
+                            <Border Margin="0,10,0,0" CornerRadius="8" Padding="12,9"
+                                    Background="#2E2113" BorderBrush="#7C5A24" BorderThickness="1">
+                                <Border.Style>
+                                    <Style TargetType="Border">
+                                        <Setter Property="Visibility" Value="Visible" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding LaunchProblem}" Value="">
+                                                <Setter Property="Visibility" Value="Collapsed" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Border.Style>
+                                <TextBlock Text="{Binding LaunchProblem}"
+                                           FontSize="12" TextWrapping="Wrap"
+                                           Foreground="#F0C27B" />
+                            </Border>
+
+                            <TextBlock Text="Tip: hold Alt while clicking to copy the launch command instead (testing aid)."
+                                       FontSize="10.5" Margin="0,8,0,0" TextWrapping="Wrap"
+                                       Foreground="{StaticResource SecondaryTextBrush}" />
+                        </StackPanel>
                     </StackPanel>
                 </ScrollViewer>
             </Grid>
@@ -454,7 +613,7 @@
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                     <TextBlock FontSize="12" Margin="0,0,16,0"
                                Foreground="{StaticResource SecondaryTextBrush}"
-                               Text="{Binding Folders.Count, StringFormat={}{0} profiles}" />
+                               Text="{Binding Folders.Count, StringFormat={}{0} libraries}" />
                     <TextBlock FontSize="12" Margin="0,0,16,0"
                                Foreground="{StaticResource SecondaryTextBrush}"
                                Text="{Binding Routes.Count, StringFormat={}{0} routes}" />

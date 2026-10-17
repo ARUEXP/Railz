@@ -15,7 +15,9 @@
 // You should have received a copy of the GNU General Public License
 // along with Open Rails.  If not, see <http://www.gnu.org/licenses/>.
 
+using System;
 using System.Windows;
+using System.Windows.Input;
 using Orts.Launcher.ViewModels;
 using ORTS.Common;
 
@@ -40,13 +42,55 @@ namespace Orts.Launcher
         {
             using var dialog = new System.Windows.Forms.FolderBrowserDialog
             {
-                Description = "Select an MSTS / Open Rails root folder (containing ROUTES and TRAINS)",
+                Description = "Select your game library folder (the one containing ROUTES and TRAINS)",
                 UseDescriptionForTitle = true,
                 ShowNewFolderButton = false,
             };
 
             if (dialog.ShowDialog() == System.Windows.Forms.DialogResult.OK && !string.IsNullOrWhiteSpace(dialog.SelectedPath))
                 _ = _viewModel.AddFolderAsync(dialog.SelectedPath);
+        }
+
+        async void DriveNow_Click(object sender, RoutedEventArgs e)
+        {
+            var arguments = _viewModel.LaunchArguments;
+
+            // Alt+click is the testing aid: copy the exact command instead of starting the simulator.
+            if ((Keyboard.Modifiers & ModifierKeys.Alt) == ModifierKeys.Alt)
+            {
+                if (arguments == null)
+                {
+                    _viewModel.StatusMessage = "Nothing to launch yet \u2014 " + _viewModel.LaunchProblem;
+                    return;
+                }
+
+                try
+                {
+                    Clipboard.SetText(arguments);
+                    _viewModel.StatusMessage = "Launch command copied to the clipboard.";
+                }
+                catch (Exception ex)
+                {
+                    _viewModel.StatusMessage = "Could not copy the launch command: " + ex.Message;
+                }
+
+                return;
+            }
+
+            // Nothing to start: the inline tip above the button already explains why.
+            if (arguments == null)
+                return;
+
+            WindowState = WindowState.Minimized;
+            try
+            {
+                await _viewModel.LaunchAsync();
+            }
+            finally
+            {
+                WindowState = WindowState.Normal;
+                Activate();
+            }
         }
     }
 }

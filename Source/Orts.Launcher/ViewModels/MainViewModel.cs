@@ -24,6 +24,7 @@ using System.Threading.Tasks;
 using System.Windows.Data;
 using ORTS.Menu;
 using ORTS.Settings;
+using Orts.Launcher.Services;
 using MenuPath = ORTS.Menu.Path;
 using SeasonType = Orts.Formats.Msts.SeasonType;
 using WeatherType = Orts.Formats.Msts.WeatherType;
@@ -41,10 +42,16 @@ namespace Orts.Launcher.ViewModels
         bool _suppressRouteDetails;
 
         /// <summary>Which selection panel the route detail pane shows.</summary>
-        public enum LauncherMode { Activity, Explore, Timetable }
+        public enum LauncherMode { QuickDrive, Activity, Timetable }
 
         public MainViewModel()
         {
+            // Quick Drive is the landing tab: its train and starting location are auto-selected,
+            // so picking a route is already enough to drive.
+            _timeOption = TimeOptions[1];       // Noon
+            _seasonOption = SeasonOptions[1];   // Summer
+            _weatherOption = WeatherOptions[0]; // Sunny
+
             RoutesView = CollectionViewSource.GetDefaultView(Routes);
             RoutesView.Filter = o => MatchesSearch((RouteItemViewModel)o);
             Routes.CollectionChanged += (_, __) => OnPropertyChanged(nameof(EmptyStateMessage));
@@ -73,35 +80,35 @@ namespace Orts.Launcher.ViewModels
         public ActivityItemViewModel? SelectedActivity
         {
             get => _selectedActivity;
-            set { if (SetProperty(ref _selectedActivity, value)) PersistSelection(); }
+            set { if (SetProperty(ref _selectedActivity, value)) { PersistSelection(); NotifyLaunchState(); } }
         }
 
         ConsistItemViewModel? _selectedConsist;
         public ConsistItemViewModel? SelectedConsist
         {
             get => _selectedConsist;
-            set { if (SetProperty(ref _selectedConsist, value)) PersistSelection(); }
+            set { if (SetProperty(ref _selectedConsist, value)) { PersistSelection(); NotifyLaunchState(); } }
         }
 
         PathItemViewModel? _selectedPath;
         public PathItemViewModel? SelectedPath
         {
             get => _selectedPath;
-            set { if (SetProperty(ref _selectedPath, value)) PersistSelection(); }
+            set { if (SetProperty(ref _selectedPath, value)) { PersistSelection(); NotifyLaunchState(); } }
         }
 
-        LauncherMode _mode = LauncherMode.Activity;
+        LauncherMode _mode = LauncherMode.QuickDrive;
+
+        public bool IsQuickDriveMode
+        {
+            get => _mode == LauncherMode.QuickDrive;
+            set => SetMode(value, LauncherMode.QuickDrive);
+        }
 
         public bool IsActivityMode
         {
             get => _mode == LauncherMode.Activity;
             set => SetMode(value, LauncherMode.Activity);
-        }
-
-        public bool IsExploreMode
-        {
-            get => _mode == LauncherMode.Explore;
-            set => SetMode(value, LauncherMode.Explore);
         }
 
         public bool IsTimetableMode
@@ -116,35 +123,64 @@ namespace Orts.Launcher.ViewModels
             if (requested && _mode != mode)
                 _mode = mode;
 
+            OnPropertyChanged(nameof(IsQuickDriveMode));
             OnPropertyChanged(nameof(IsActivityMode));
-            OnPropertyChanged(nameof(IsExploreMode));
             OnPropertyChanged(nameof(IsTimetableMode));
+            NotifyLaunchState();
         }
 
-        string _selectedTime = "10:00";
-        public string SelectedTime
+        // ---- environment pills (time of day, weather, season) ----
+
+        OptionItemViewModel _timeOption;
+        OptionItemViewModel _seasonOption;
+        OptionItemViewModel _weatherOption;
+
+        public IReadOnlyList<OptionItemViewModel> TimeOptions { get; } = new[]
         {
-            get => _selectedTime;
-            set { if (SetProperty(ref _selectedTime, value ?? string.Empty)) PersistSelection(); }
-        }
+            new OptionItemViewModel("\U0001F305", "Morning", "7:00"),
+            new OptionItemViewModel("\u2600\uFE0F", "Noon", "12:00"),
+            new OptionItemViewModel("\U0001F319", "Night", "21:00"),
+        };
 
-        SeasonType _selectedSeason = SeasonType.Summer;
-        public SeasonType SelectedSeason
+        public IReadOnlyList<OptionItemViewModel> WeatherOptions { get; } = new[]
         {
-            get => _selectedSeason;
-            set { if (SetProperty(ref _selectedSeason, value)) PersistSelection(); }
-        }
+            new OptionItemViewModel("\u2600\uFE0F", "Sunny", WeatherType.Clear),
+            new OptionItemViewModel("\U0001F327\uFE0F", "Rain", WeatherType.Rain),
+            new OptionItemViewModel("\u2744\uFE0F", "Snow", WeatherType.Snow),
+        };
 
-        WeatherType _selectedWeather = WeatherType.Clear;
-        public WeatherType SelectedWeather
+        public IReadOnlyList<OptionItemViewModel> SeasonOptions { get; } = new[]
         {
-            get => _selectedWeather;
-            set { if (SetProperty(ref _selectedWeather, value)) PersistSelection(); }
+            new OptionItemViewModel("\U0001F338", "Spring", SeasonType.Spring),
+            new OptionItemViewModel("\u2600\uFE0F", "Summer", SeasonType.Summer),
+            new OptionItemViewModel("\U0001F342", "Autumn", SeasonType.Autumn),
+            new OptionItemViewModel("\u2744\uFE0F", "Winter", SeasonType.Winter),
+        };
+
+        public OptionItemViewModel SelectedTimeOption
+        {
+            get => _timeOption;
+            set { if (value != null && SetProperty(ref _timeOption, value)) { OnPropertyChanged(nameof(SelectedTime)); PersistSelection(); } }
         }
 
-        public IReadOnlyList<SeasonType> Seasons { get; } = Enum.GetValues<SeasonType>();
+        public OptionItemViewModel SelectedSeasonOption
+        {
+            get => _seasonOption;
+            set { if (value != null && SetProperty(ref _seasonOption, value)) { OnPropertyChanged(nameof(SelectedSeason)); PersistSelection(); } }
+        }
 
-        public IReadOnlyList<WeatherType> Weathers { get; } = Enum.GetValues<WeatherType>();
+        public OptionItemViewModel SelectedWeatherOption
+        {
+            get => _weatherOption;
+            set { if (value != null && SetProperty(ref _weatherOption, value)) { OnPropertyChanged(nameof(SelectedWeather)); PersistSelection(); } }
+        }
+
+        /// <summary>Departure time, in the "H:MM" form the simulator parses.</summary>
+        public string SelectedTime => (string)_timeOption.Value;
+
+        public SeasonType SelectedSeason => (SeasonType)_seasonOption.Value;
+
+        public WeatherType SelectedWeather => (WeatherType)_weatherOption.Value;
 
         string _consistSearchText = string.Empty;
         public string ConsistSearchText
@@ -212,8 +248,8 @@ namespace Orts.Launcher.ViewModels
         public bool ShowEmptyState => !_isLoading && _selectedRoute == null;
 
         public string EmptyStateMessage => Routes.Count == 0
-            ? "No routes found. Select an MSTS / Open Rails root folder (containing ROUTES and TRAINS directories) to begin."
-            : "Select a route from the list to see its details.";
+            ? "No routes found yet. Use the + button to add your game library folder \u2014 the one that contains the ROUTES and TRAINS folders."
+            : "Pick a route on the left to get driving.";
 
         string _statusMessage = "Ready.";
         public string StatusMessage
@@ -344,6 +380,7 @@ namespace Orts.Launcher.ViewModels
                 var loaded = await Task.Run(() =>
                 {
                     var activities = Activity.GetActivities(folder, route.Route)
+                        .Where(a => !(a is ExploreActivity))   // the synthetic free-drive entries are the Quick Drive tab's job
                         .Select(a => new ActivityItemViewModel(a))
                         .ToList();
 
@@ -376,7 +413,8 @@ namespace Orts.Launcher.ViewModels
 
                 RestoreRouteDetailSelections();
 
-                StatusMessage = $"{Activities.Count} activities, {Paths.Count} paths, {Consists.Count} consists.";
+                StatusMessage = $"{Activities.Count} missions, {Paths.Count} places, {Consists.Count} trains.";
+                NotifyLaunchState();
             }
             catch (Exception ex)
             {
@@ -396,9 +434,14 @@ namespace Orts.Launcher.ViewModels
             Activities.Clear();
             Paths.Clear();
             Consists.Clear();
+            NotifyLaunchState();
         }
 
-        /// <summary>Re-applies the stored activity / consist / path / environment choices for the current route.</summary>
+        /// <summary>
+        /// Re-applies the stored mission / train / place / environment choices for the current route.
+        /// Anything stored but no longer present falls back to the first entry, so the launcher always
+        /// lands on a usable selection instead of an empty one.
+        /// </summary>
         void RestoreRouteDetailSelections()
         {
             var activity = LastSelection(UserSettings.Menu_SelectionIndex.Activity);
@@ -413,15 +456,28 @@ namespace Orts.Launcher.ViewModels
             SelectedPath = Paths.FirstOrDefault(p => string.Equals(p.FilePath, pathPath, StringComparison.OrdinalIgnoreCase))
                 ?? Paths.FirstOrDefault();
 
-            var time = LastSelection(UserSettings.Menu_SelectionIndex.Time);
-            if (!string.IsNullOrWhiteSpace(time))
-                SelectedTime = time;
+            var hour = HourOf(LastSelection(UserSettings.Menu_SelectionIndex.Time));
+            var timeOption = TimeOptions.FirstOrDefault(o => HourOf((string)o.Value) == hour);
+            if (timeOption != null)
+                SelectedTimeOption = timeOption;
 
-            if (Enum.TryParse<SeasonType>(LastSelection(UserSettings.Menu_SelectionIndex.Season), out var season))
-                SelectedSeason = season;
+            // Enum.TryParse reads both the legacy integer form ("1") and the name form ("Summer").
+            var seasonOption = Enum.TryParse<SeasonType>(LastSelection(UserSettings.Menu_SelectionIndex.Season), out var season)
+                ? SeasonOptions.FirstOrDefault(o => (SeasonType)o.Value == season)
+                : null;
+            if (seasonOption != null)
+                SelectedSeasonOption = seasonOption;
 
-            if (Enum.TryParse<WeatherType>(LastSelection(UserSettings.Menu_SelectionIndex.Weather), out var weather))
-                SelectedWeather = weather;
+            var weatherOption = Enum.TryParse<WeatherType>(LastSelection(UserSettings.Menu_SelectionIndex.Weather), out var weather)
+                ? WeatherOptions.FirstOrDefault(o => (WeatherType)o.Value == weather)
+                : null;
+            if (weatherOption != null)
+                SelectedWeatherOption = weatherOption;
+        }
+
+        static int? HourOf(string? time)
+        {
+            return int.TryParse((time ?? string.Empty).Split(':')[0], out var hour) ? hour : null;
         }
 
         static void Replace<T>(ObservableCollection<T> target, IList<T> source)
@@ -486,6 +542,85 @@ namespace Orts.Launcher.ViewModels
             }
         }
 
+        // ---- launch hand-off ----
+
+        /// <summary>The RunActivity.exe command line for the current selection, or null when there is nothing to start.</summary>
+        public string? LaunchArguments
+        {
+            get
+            {
+                if (_mode == LauncherMode.Activity)
+                {
+                    var activity = _selectedActivity?.FilePath;
+                    return string.IsNullOrEmpty(activity) ? null : SimulatorLaunchService.ActivityArguments(activity);
+                }
+
+                if (_mode == LauncherMode.QuickDrive)
+                {
+                    var path = _selectedPath?.FilePath;
+                    var consist = _selectedConsist?.FilePath;
+                    return string.IsNullOrEmpty(path) || string.IsNullOrEmpty(consist)
+                        ? null
+                        : SimulatorLaunchService.QuickDriveArguments(path, consist, SelectedTime, SelectedSeason, SelectedWeather);
+                }
+
+                return null;
+            }
+        }
+
+        /// <summary>Plain-English reason the Drive button cannot start anything yet; empty when it can.</summary>
+        public string LaunchProblem
+        {
+            get
+            {
+                if (_mode == LauncherMode.Activity)
+                {
+                    return string.IsNullOrEmpty(_selectedActivity?.FilePath)
+                        ? "Pick a mission above, then press Start Mission."
+                        : string.Empty;
+                }
+
+                if (_mode == LauncherMode.QuickDrive)
+                {
+                    if (string.IsNullOrEmpty(_selectedConsist?.FilePath))
+                        return "Select a train above to drive.";
+                    if (string.IsNullOrEmpty(_selectedPath?.FilePath))
+                        return "Select a starting location above to drive.";
+                }
+
+                return string.Empty;
+            }
+        }
+
+        public string LaunchButtonLabel =>
+            _mode == LauncherMode.Activity ? "\u25B6  Start Mission" : "\u25B6  Drive Now";
+
+        void NotifyLaunchState()
+        {
+            OnPropertyChanged(nameof(LaunchArguments));
+            OnPropertyChanged(nameof(LaunchProblem));
+            OnPropertyChanged(nameof(LaunchButtonLabel));
+        }
+
+        /// <summary>Starts the simulator and returns once it has exited.</summary>
+        public async Task LaunchAsync()
+        {
+            var arguments = LaunchArguments;
+            if (arguments == null)
+                return;
+
+            try
+            {
+                StatusMessage = "Starting the simulator\u2026";
+                await SimulatorLaunchService.RunAsync(arguments);
+                StatusMessage = "The simulator has closed.";
+            }
+            catch (Exception ex)
+            {
+                StatusMessage = "Could not start the simulator: " + ex.Message;
+            }
+        }
+
         bool MatchesSearch(RouteItemViewModel route)
         {
             if (string.IsNullOrWhiteSpace(SearchText))
@@ -531,9 +666,10 @@ namespace Orts.Launcher.ViewModels
             updated[(int)UserSettings.Menu_SelectionIndex.Locomotive] = _selectedConsist?.LocomotivePath ?? string.Empty;
             updated[(int)UserSettings.Menu_SelectionIndex.Consist] = _selectedConsist?.FilePath ?? string.Empty;
             updated[(int)UserSettings.Menu_SelectionIndex.Path] = _selectedPath?.FilePath ?? string.Empty;
-            updated[(int)UserSettings.Menu_SelectionIndex.Time] = _selectedTime;
-            updated[(int)UserSettings.Menu_SelectionIndex.Season] = _selectedSeason.ToString();
-            updated[(int)UserSettings.Menu_SelectionIndex.Weather] = _selectedWeather.ToString();
+            updated[(int)UserSettings.Menu_SelectionIndex.Time] = SelectedTime;
+            // Season and weather are stored as their numbers, which is what the legacy Menu reads back.
+            updated[(int)UserSettings.Menu_SelectionIndex.Season] = ((int)SelectedSeason).ToString();
+            updated[(int)UserSettings.Menu_SelectionIndex.Weather] = ((int)SelectedWeather).ToString();
             _settings.Menu_Selection = updated;
 
             var settings = _settings;

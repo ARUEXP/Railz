@@ -16,8 +16,10 @@
 // along with Open Rails.  If not, see <http://www.gnu.org/licenses/>.
 
 using System;
+using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Input;
+using System.Windows.Interop;
 using Orts.Launcher.ViewModels;
 using ORTS.Common;
 
@@ -31,12 +33,35 @@ namespace Orts.Launcher
         {
             InitializeComponent();
 
-            Title = $"Open Rails \u2014 Modern Launcher  {VersionInfo.VersionOrBuild}";
+            Title = $"Railz  {VersionInfo.VersionOrBuild}";
             DataContext = _viewModel;
 
             // Discovery touches disk and parses content, so it starts after the window is shown.
             Loaded += async (_, __) => await _viewModel.LoadFoldersAsync();
         }
+
+        protected override void OnSourceInitialized(EventArgs e)
+        {
+            base.OnSourceInitialized(e);
+            UseNativeDarkTitleBar();
+        }
+
+        /// <summary>Asks DWM to draw the OS title bar dark, so it does not stay stark white above the black shell.</summary>
+        void UseNativeDarkTitleBar()
+        {
+            var handle = new WindowInteropHelper(this).Handle;
+            if (handle == IntPtr.Zero)
+                return;
+
+            int dark = 1;
+            // Attribute 20 is current; Windows 10 1809 and earlier ignore it and use 19 instead.
+            if (DwmSetWindowAttribute(handle, 20, ref dark, sizeof(int)) != 0)
+                DwmSetWindowAttribute(handle, 19, ref dark, sizeof(int));
+        }
+
+        /// <summary>No-op on Windows versions that predate immersive dark mode, which simply return an error.</summary>
+        [DllImport("dwmapi.dll", PreserveSig = true)]
+        static extern int DwmSetWindowAttribute(IntPtr hwnd, int attribute, ref int value, int size);
 
         void AddFolder_Click(object sender, RoutedEventArgs e)
         {

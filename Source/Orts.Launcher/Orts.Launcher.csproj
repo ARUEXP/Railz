@@ -4,7 +4,8 @@
     <OutputType>WinExe</OutputType>
     <TargetFramework>net6-windows</TargetFramework>
     <UseWPF>true</UseWPF>
-    <UseWindowsForms>false</UseWindowsForms>
+    <!-- WinForms is enabled only for its FolderBrowserDialog, which the legacy Menu also uses. -->
+    <UseWindowsForms>true</UseWindowsForms>
     <Nullable>enable</Nullable>
     <!-- Run on the installed .NET 8 desktop runtime instead of requiring the obsolete .NET 6 runtime. -->
     <RollForward>Major</RollForward>

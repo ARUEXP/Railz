@@ -94,26 +94,45 @@
                         <TextBlock Text="Installation Profile"
                                    FontSize="11" Margin="0,0,0,5"
                                    Foreground="{StaticResource SecondaryTextBrush}" />
-                        <ComboBox ItemsSource="{Binding Folders}"
-                                  SelectedItem="{Binding SelectedFolder, Mode=TwoWay}"
-                                  DisplayMemberPath="Name"
-                                  Margin="0,0,0,12">
-                            <ComboBox.Style>
-                                <Style TargetType="ComboBox">
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding IsLoading}" Value="True">
-                                            <Setter Property="IsEnabled" Value="False" />
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </ComboBox.Style>
-                        </ComboBox>
+                        <Grid Margin="0,0,0,12">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <ComboBox Grid.Column="0"
+                                      ItemsSource="{Binding Folders}"
+                                      SelectedItem="{Binding SelectedFolder, Mode=TwoWay}"
+                                      DisplayMemberPath="Name"
+                                      IsEnabled="{Binding CanChangeFolder}" />
+                            <Button Grid.Column="1" Content="+" Width="34" Margin="6,0,0,0"
+                                    Padding="0" FontSize="16"
+                                    Click="AddFolder_Click"
+                                    ToolTip="Add an MSTS / Open Rails content folder" />
+                        </Grid>
 
                         <TextBlock Text="Routes"
                                    FontSize="11" Margin="0,0,0,5"
                                    Foreground="{StaticResource SecondaryTextBrush}" />
-                        <TextBox Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
-                                 ToolTip="Filter routes by name or description" />
+                        <Grid>
+                            <TextBox Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
+                                     ToolTip="Filter routes by name or description" />
+                            <TextBlock Text="Search routes..."
+                                       Margin="12,0,0,0"
+                                       VerticalAlignment="Center"
+                                       IsHitTestVisible="False"
+                                       Foreground="{StaticResource SecondaryTextBrush}">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Visibility" Value="Collapsed" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding SearchText}" Value="">
+                                                <Setter Property="Visibility" Value="Visible" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                        </Grid>
                     </StackPanel>
 
                     <ListBox ItemsSource="{Binding RoutesView}"
@@ -157,21 +176,11 @@
             <!-- Right: route detail -->
             <Grid Grid.Column="1">
                 <!-- Empty state -->
-                <TextBlock Text="Select a route to see its details."
-                           FontSize="14"
+                <TextBlock Text="{Binding EmptyStateMessage}"
+                           FontSize="14" MaxWidth="520" TextAlignment="Center" TextWrapping="Wrap"
                            HorizontalAlignment="Center" VerticalAlignment="Center"
-                           Foreground="{StaticResource SecondaryTextBrush}">
-                    <TextBlock.Style>
-                        <Style TargetType="TextBlock">
-                            <Setter Property="Visibility" Value="Collapsed" />
-                            <Style.Triggers>
-                                <DataTrigger Binding="{Binding SelectedRoute}" Value="{x:Null}">
-                                    <Setter Property="Visibility" Value="Visible" />
-                                </DataTrigger>
-                            </Style.Triggers>
-                        </Style>
-                    </TextBlock.Style>
-                </TextBlock>
+                           Foreground="{StaticResource SecondaryTextBrush}"
+                           Visibility="{Binding ShowEmptyState, Converter={StaticResource BoolToVis}}" />
 
                 <ScrollViewer VerticalScrollBarVisibility="Auto"
                               Padding="24">

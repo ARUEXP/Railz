@@ -35,5 +35,18 @@ namespace Orts.Launcher
             // Discovery touches disk and parses content, so it starts after the window is shown.
             Loaded += async (_, __) => await _viewModel.LoadFoldersAsync();
         }
+
+        void AddFolder_Click(object sender, RoutedEventArgs e)
+        {
+            using var dialog = new System.Windows.Forms.FolderBrowserDialog
+            {
+                Description = "Select an MSTS / Open Rails root folder (containing ROUTES and TRAINS)",
+                UseDescriptionForTitle = true,
+                ShowNewFolderButton = false,
+            };
+
+            if (dialog.ShowDialog() == System.Windows.Forms.DialogResult.OK && !string.IsNullOrWhiteSpace(dialog.SelectedPath))
+                _ = _viewModel.AddFolderAsync(dialog.SelectedPath);
+        }
     }
 }

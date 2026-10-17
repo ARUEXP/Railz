@@ -16,6 +16,7 @@
 // along with Open Rails.  If not, see <http://www.gnu.org/licenses/>.
 
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Linq;
@@ -39,6 +40,7 @@ namespace Orts.Launcher.ViewModels
         {
             RoutesView = CollectionViewSource.GetDefaultView(Routes);
             RoutesView.Filter = o => MatchesSearch((RouteItemViewModel)o);
+            Routes.CollectionChanged += (_, __) => OnPropertyChanged(nameof(EmptyStateMessage));
         }
 
         public ObservableCollection<FolderItemViewModel> Folders { get; } = new ObservableCollection<FolderItemViewModel>();
@@ -71,7 +73,10 @@ namespace Orts.Launcher.ViewModels
             set
             {
                 if (SetProperty(ref _selectedRoute, value))
+                {
                     PersistSelection();
+                    OnPropertyChanged(nameof(ShowEmptyState));
+                }
             }
         }
 
@@ -79,8 +84,25 @@ namespace Orts.Launcher.ViewModels
         public bool IsLoading
         {
             get => _isLoading;
-            set => SetProperty(ref _isLoading, value);
+            set
+            {
+                if (SetProperty(ref _isLoading, value))
+                {
+                    OnPropertyChanged(nameof(CanChangeFolder));
+                    OnPropertyChanged(nameof(ShowEmptyState));
+                }
+            }
         }
+
+        /// <summary>False while a scan is running, so the profile picker can't be changed mid-load.</summary>
+        public bool CanChangeFolder => !_isLoading;
+
+        /// <summary>True when the centre pane should show the empty-state hint instead of route details.</summary>
+        public bool ShowEmptyState => !_isLoading && _selectedRoute == null;
+
+        public string EmptyStateMessage => Routes.Count == 0
+            ? "No routes found. Select an MSTS / Open Rails root folder (containing ROUTES and TRAINS directories) to begin."
+            : "Select a route from the list to see its details.";
 
         string _statusMessage = "Ready.";
         public string StatusMessage
@@ -100,7 +122,7 @@ namespace Orts.Launcher.ViewModels
             }
         }
 
-        public async Task LoadFoldersAsync()
+        public async Task LoadFoldersAsync(string? preferredFolderPath = null)
         {
             IsLoading = true;
             StatusMessage = "Locating installation profiles\u2026";
@@ -119,7 +141,8 @@ namespace Orts.Launcher.ViewModels
 
                 var lastFolder = LastSelection(UserSettings.Menu_SelectionIndex.Folder);
                 var lastRoute = LastSelection(UserSettings.Menu_SelectionIndex.Route);
-                var match = Folders.FirstOrDefault(f => string.Equals(f.Path, lastFolder, StringComparison.OrdinalIgnoreCase))
+                var match = Folders.FirstOrDefault(f => string.Equals(f.Path, preferredFolderPath, StringComparison.OrdinalIgnoreCase))
+                    ?? Folders.FirstOrDefault(f => string.Equals(f.Path, lastFolder, StringComparison.OrdinalIgnoreCase))
                     ?? Folders.FirstOrDefault();
 
                 _suppressFolderLoad = true;
@@ -182,6 +205,61 @@ namespace Orts.Launcher.ViewModels
             finally
             {
                 IsLoading = false;
+            }
+        }
+
+        /// <summary>
+        /// Registers a new installation profile (an MSTS / Open Rails root folder), persists it and reloads.
+        /// </summary>
+        public async Task AddFolderAsync(string path)
+        {
+            if (_settings == null || string.IsNullOrWhiteSpace(path))
+                return;
+
+            path = path.TrimEnd(System.IO.Path.DirectorySeparatorChar, System.IO.Path.AltDirectorySeparatorChar);
+            var settings = _settings;
+            var name = UniqueFolderName(path);
+
+            var folders = Folders.Select(f => f.Folder).ToList();
+            folders.Add(new Folder(name, path));
+
+            StatusMessage = $"Adding profile \u201c{name}\u201d\u2026";
+            IsLoading = true;
+
+            try
+            {
+                await Task.Run(() =>
+                {
+                    Folder.SetFolders(settings, folders);
+                    settings.Save();
+                });
+            }
+            catch (Exception ex)
+            {
+                StatusMessage = "Could not add the folder: " + ex.Message;
+                IsLoading = false;
+                return;
+            }
+
+            await LoadFoldersAsync(path);
+        }
+
+        /// <summary>Profile names are dictionary keys, so a used name gets a numeric suffix.</summary>
+        string UniqueFolderName(string path)
+        {
+            var existing = _settings!.Folders.Folders;
+            var baseName = System.IO.Path.GetFileName(path);
+            if (string.IsNullOrEmpty(baseName))
+                baseName = path;
+
+            if (!existing.TryGetValue(baseName, out var current) || string.Equals(current, path, StringComparison.OrdinalIgnoreCase))
+                return baseName;
+
+            for (var i = 2; ; i++)
+            {
+                var candidate = $"{baseName} ({i})";
+                if (!existing.ContainsKey(candidate))
+                    return candidate;
             }
         }
 

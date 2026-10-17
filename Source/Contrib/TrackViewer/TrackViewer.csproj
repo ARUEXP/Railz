@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>net6-windows</TargetFramework>
     <OutputType>WinExe</OutputType>
@@ -16,6 +16,7 @@
     <Copyright>Copyright © 2009 - 2022</Copyright>
     <PackageLicenseExpression>GPL-3.0-or-later</PackageLicenseExpression>
     <DefineConstants>TRACE;WINDOWS</DefineConstants>
+    <NoWarn>$(NoWarn);NU1605</NoWarn>
   </PropertyGroup>
   <PropertyGroup>
     <ApplicationManifest>..\..\Launcher\app.manifest</ApplicationManifest>

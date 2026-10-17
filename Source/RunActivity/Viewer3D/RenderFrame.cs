@@ -419,7 +419,7 @@ namespace Orts.Viewer3D
             {
                 if (ShadowMap == null)
                 {
-                    var shadowMapSize = Game.Settings.ShadowMapResolution;
+                    var shadowMapSize = GetShadowMapResolution();
                     ShadowMap = new RenderTarget2D[RenderProcess.ShadowMapCount];
                     ShadowMapRenderTarget = new RenderTarget2D[RenderProcess.ShadowMapCount];
                     for (var shadowMapIndex = 0; shadowMapIndex < RenderProcess.ShadowMapCount; shadowMapIndex++)
@@ -447,22 +447,61 @@ namespace Orts.Viewer3D
 
             XNACameraView = Matrix.Identity;
             XNACameraProjection = Matrix.CreateOrthographic(game.RenderProcess.DisplaySize.X, game.RenderProcess.DisplaySize.Y, 1, 100);
-
-            ScreenChanged();
         }
 
-        void ScreenChanged()
+        /// <summary>
+        /// Largest shadow map ever allocated, whatever the settings ask for.
+        /// </summary>
+        const int ShadowMapResolutionMaximum = 4096;
+        const int ShadowMapResolutionMinimum = 256;
+
+        /// <summary>
+        /// Video memory budget for the shadow maps. Comfortably above the 64 MB that the
+        /// 4 x 1024 defaults cost, so it never bites a default install, but it stops a large
+        /// ShadowMapResolution setting from asking a fill-rate-limited adapter for hundreds of
+        /// megabytes of render targets.
+        /// </summary>
+        const long ShadowMapMemoryBudget = 128 * 1024 * 1024;
+
+        /// <summary>
+        /// Caps the shadow map size to the memory budget. The capped value is written back to the
+        /// settings because the shadow map matrices and the shader's texel offsets are both derived
+        /// from it, and all three must agree with the size of the textures actually allocated.
+        /// </summary>
+        int GetShadowMapResolution()
         {
-            RenderSurface = new RenderTarget2D(
-                Game.RenderProcess.GraphicsDevice,
-                Game.RenderProcess.GraphicsDevice.PresentationParameters.BackBufferWidth,
-                Game.RenderProcess.GraphicsDevice.PresentationParameters.BackBufferHeight,
-                false,
-                Game.RenderProcess.GraphicsDevice.PresentationParameters.BackBufferFormat,
-                Game.RenderProcess.GraphicsDevice.PresentationParameters.DepthStencilFormat,
-                Game.RenderProcess.GraphicsDevice.PresentationParameters.MultiSampleCount,
-                RenderTargetUsage.PreserveContents
-            );
+            var resolution = Math.Max(Math.Min(Game.Settings.ShadowMapResolution, ShadowMapResolutionMaximum), ShadowMapResolutionMinimum);
+            // Each shadow map is a pair of Rg32 targets, 8 bytes per texel each.
+            while (resolution > ShadowMapResolutionMinimum && (long)RenderProcess.ShadowMapCount * resolution * resolution * 8 * 2 > ShadowMapMemoryBudget)
+                resolution /= 2;
+            Game.Settings.ShadowMapResolution = resolution;
+            return resolution;
+        }
+
+        /// <summary>
+        /// Gets the full-screen target the scene is composited into before it reaches the backbuffer.
+        /// Only the distant mountains pass needs it; everything else draws straight to the backbuffer.
+        /// </summary>
+        RenderTarget2D GetRenderSurface(GraphicsDevice graphicsDevice)
+        {
+            var backBuffer = graphicsDevice.PresentationParameters;
+            if (RenderSurface != null && (RenderSurface.Width != backBuffer.BackBufferWidth || RenderSurface.Height != backBuffer.BackBufferHeight))
+                ReleaseRenderSurface();
+            if (RenderSurface == null)
+                RenderSurface = new RenderTarget2D(graphicsDevice, backBuffer.BackBufferWidth, backBuffer.BackBufferHeight, false, backBuffer.BackBufferFormat, backBuffer.DepthStencilFormat, backBuffer.MultiSampleCount, RenderTargetUsage.PreserveContents);
+            return RenderSurface;
+        }
+
+        /// <summary>
+        /// Releases the composite render surface, giving its memory back when no composite is needed.
+        /// Render thread only; the surface is created and disposed here while drawing.
+        /// </summary>
+        void ReleaseRenderSurface()
+        {
+            if (RenderSurface == null)
+                return;
+            RenderSurface.Dispose();
+            RenderSurface = null;
         }
 
         public void Clear()
@@ -712,9 +751,6 @@ namespace Orts.Viewer3D
         [CallOnThread("Render")]
         public void Draw(GraphicsDevice graphicsDevice)
         {
-            if (RenderSurface.Width != graphicsDevice.PresentationParameters.BackBufferWidth || RenderSurface.Height != graphicsDevice.PresentationParameters.BackBufferHeight)
-                ScreenChanged();
-
 #if DEBUG_RENDER_STATE
             DebugRenderState(graphicsDevice, "RenderFrame.Draw");
 #endif
@@ -816,13 +852,15 @@ namespace Orts.Viewer3D
         /// <param name="logging"></param>
         void DrawSimple(GraphicsDevice graphicsDevice, bool logging)
         {
-            if (RenderSurfaceMaterial != null)
-            {
-                graphicsDevice.SetRenderTarget(RenderSurface);
-            }
+            // The scene only needs a render surface when the distant mountains pass has to be
+            // composited with the near scene. Otherwise drawing goes straight into the backbuffer,
+            // which saves a full-screen render target and its copy - pure bandwidth, and the first
+            // thing to give on an integrated adapter.
+            var renderSurface = Game.Settings.DistantMountains && RenderSurfaceMaterial != null ? GetRenderSurface(graphicsDevice) : null;
 
-            if (Game.Settings.DistantMountains)
+            if (renderSurface != null)
             {
+                graphicsDevice.SetRenderTarget(renderSurface);
                 if (logging) Console.WriteLine("  DrawSimple (Distant Mountains) {");
                 graphicsDevice.Clear(ClearOptions.Target | ClearOptions.DepthBuffer | ClearOptions.Stencil, Color.Transparent, 1, 0);
                 DrawSequencesDistantMountains(graphicsDevice, logging);
@@ -831,22 +869,21 @@ namespace Orts.Viewer3D
                 graphicsDevice.Clear(ClearOptions.DepthBuffer, Color.Transparent, 1, 0);
                 DrawSequences(graphicsDevice, logging);
                 if (logging) Console.WriteLine("  }");
+
+                graphicsDevice.SetRenderTarget(null);
+                graphicsDevice.Clear(ClearOptions.Target | ClearOptions.DepthBuffer | ClearOptions.Stencil, Color.Transparent, 1, 0);
+                RenderSurfaceMaterial.SetState(graphicsDevice, null);
+                RenderSurfaceMaterial.SpriteBatch.Draw(renderSurface, Vector2.Zero, Color.White);
+                RenderSurfaceMaterial.ResetState(graphicsDevice);
             }
             else
             {
+                ReleaseRenderSurface();
+                graphicsDevice.SetRenderTarget(null);
                 if (logging) Console.WriteLine("  DrawSimple {");
                 graphicsDevice.Clear(ClearOptions.Target | ClearOptions.DepthBuffer | ClearOptions.Stencil, Color.Transparent, 1, 0);
                 DrawSequences(graphicsDevice, logging);
                 if (logging) Console.WriteLine("  }");
-            }
-
-            if (RenderSurfaceMaterial != null)
-            {
-                graphicsDevice.SetRenderTarget(null);
-                graphicsDevice.Clear(ClearOptions.Target | ClearOptions.DepthBuffer | ClearOptions.Stencil, Color.Transparent, 1, 0);
-                RenderSurfaceMaterial.SetState(graphicsDevice, null);
-                RenderSurfaceMaterial.SpriteBatch.Draw(RenderSurface, Vector2.Zero, Color.White);
-                RenderSurfaceMaterial.ResetState(graphicsDevice);
             }
         }
 

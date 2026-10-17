@@ -454,6 +454,20 @@ void _PSSceneryFade(inout float4 Color, in VERTEX_OUTPUT In)
 	Color.a *= saturate((LightVector_ZFar.w - length(In.RelPosition.xyz)) / 50);
 }
 
+// Fast filmic tone curve (Narkowicz' ACES approximation). Rolls bright daylight off instead of
+// letting it clip flat, and steepens the mid-tones for a little extra contrast. Applied to the
+// final colour of every world pixel shader below so neighbouring materials shade consistently.
+// Not applied to PSSignalLight, whose output is an additive emissive glow rather than a surface.
+float3 ACESFilm(float3 x)
+{
+	float a = 2.51f;
+	float b = 0.03f;
+	float c = 2.43f;
+	float d = 0.59f;
+	float e = 0.14f;
+	return saturate((x * (a * x + b)) / (x * (c * x + d) + e));
+}
+
 float4 PSImage(uniform bool ShaderModel3, uniform bool ClampTexCoords, in VERTEX_OUTPUT In) : COLOR0
 {
 	const float FullBrightness = 1.0;
@@ -483,7 +497,8 @@ float4 PSImage(uniform bool ShaderModel3, uniform bool ClampTexCoords, in VERTEX
 	_PSApplyFog(litColor, In);
 	if (ShaderModel3) _PSSceneryFade(Color, In);
 	//if (ShaderModel3) _PSApplyShadowColor(litColor, In);
-	return float4(litColor, Color.a);
+	// The curve needs more arithmetic slots than the ps_2_0 level 9_1 target allows.
+	return float4(ShaderModel3 ? ACESFilm(litColor) : litColor, Color.a);
 }
 
 float4 PSImage9_3(in VERTEX_OUTPUT In) : COLOR0
@@ -518,7 +533,7 @@ float4 PSVegetation(in VERTEX_OUTPUT In) : COLOR0
 	// And fogging is last.
 	_PSApplyFog(litColor, In);
 	_PSSceneryFade(Color, In);
-	return float4(litColor, Color.a);
+	return float4(ACESFilm(litColor), Color.a);
 }
 
 float4 PSTerrain(uniform bool ShaderModel3, in VERTEX_OUTPUT In) : COLOR0
@@ -542,7 +557,7 @@ float4 PSTerrain(uniform bool ShaderModel3, in VERTEX_OUTPUT In) : COLOR0
 	_PSApplyFog(litColor, In);
 	_PSSceneryFade(Color, In);
 	//if (ShaderModel3) _PSApplyShadowColor(litColor, In);
-	return float4(litColor, Color.a);
+	return float4(ShaderModel3 ? ACESFilm(litColor) : litColor, Color.a);
 }
 
 float4 PSTerrain9_3(in VERTEX_OUTPUT In) : COLOR0
@@ -574,7 +589,7 @@ float4 PSDarkShade(in VERTEX_OUTPUT In) : COLOR0
 	// And fogging is last.
 	_PSApplyFog(litColor, In);
 	_PSSceneryFade(Color, In);
-	return float4(litColor, Color.a);
+	return float4(ACESFilm(litColor), Color.a);
 }
 
 float4 PSHalfBright(in VERTEX_OUTPUT In) : COLOR0
@@ -596,7 +611,7 @@ float4 PSHalfBright(in VERTEX_OUTPUT In) : COLOR0
 	// And fogging is last.
 	_PSApplyFog(litColor, In);
 	_PSSceneryFade(Color, In);
-	return float4(litColor, Color.a);
+	return float4(ACESFilm(litColor), Color.a);
 }
 
 float4 PSFullBright(in VERTEX_OUTPUT In) : COLOR0
@@ -614,7 +629,7 @@ float4 PSFullBright(in VERTEX_OUTPUT In) : COLOR0
 	// And fogging is last.
 	_PSApplyFog(litColor, In);
 	_PSSceneryFade(Color, In);
-	return float4(litColor, Color.a);
+	return float4(ACESFilm(litColor), Color.a);
 }
 
 float4 PSSignalLight(in VERTEX_OUTPUT In) : COLOR0

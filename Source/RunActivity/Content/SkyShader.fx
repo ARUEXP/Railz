@@ -166,6 +166,18 @@ float3 ContrastSaturationBrightness(float3 color, float brt, float sat, float co
 	return conColor;
 }
 
+// Fast filmic tone curve (Narkowicz' ACES approximation), matching SceneryShader.fx. Without it
+// the graded scenery meets an ungraded sky at the horizon and the join is visible.
+float3 ACESFilm(float3 x)
+{
+	float a = 2.51f;
+	float b = 0.03f;
+	float c = 2.43f;
+	float d = 0.59f;
+	float e = 0.14f;
+	return saturate((x * (a * x + b)) / (x * (c * x + d) + e));
+}
+
 float4 PSSky(VERTEX_OUTPUT In) : COLOR
 {
 	// Get the color information for the current pixel
@@ -281,6 +293,30 @@ float4 PSClouds(VERTEX_OUTPUT In) : COLOR
 	return cloudColor;
 }
 
+////////////////////    S H A D E R   M O D E L   3   E N T R I E S    /////////////////
+
+// The level 9_1 target allows only 64 arithmetic slots and the sky dome needs 69 once the filmic
+// curve is added, so the shaders above stay flat and these entries apply the grade instead. Sky.cs
+// chooses between them by feature level, the same way Terrain and Water choose their techniques.
+
+float4 PSSky9_3(VERTEX_OUTPUT In) : COLOR
+{
+	float4 Color = PSSky(In);
+	return float4(ACESFilm(Color.rgb), Color.a);
+}
+
+float4 PSMoon9_3(VERTEX_OUTPUT In) : COLOR
+{
+	float4 Color = PSMoon(In);
+	return float4(ACESFilm(Color.rgb), Color.a);
+}
+
+float4 PSClouds9_3(VERTEX_OUTPUT In) : COLOR
+{
+	float4 Color = PSClouds(In);
+	return float4(ACESFilm(Color.rgb), Color.a);
+}
+
 ///////////////////////////    T E C H N I Q U E S    ///////////////////////////////
 
 // These techniques are all the same, but we'll keep them separate for now.
@@ -292,6 +328,13 @@ technique Sky {
    }
 }
 
+technique SkyLevel9_3 {
+   pass Pass_0 {
+	  VertexShader = compile vs_4_0_level_9_3 VSSky();
+	  PixelShader = compile ps_4_0_level_9_3 PSSky9_3();
+   }
+}
+
 technique Moon {
    pass Pass_0 {
 	  VertexShader = compile vs_4_0_level_9_1 VSMoon();
@@ -299,9 +342,23 @@ technique Moon {
    }
 }
 
+technique MoonLevel9_3 {
+   pass Pass_0 {
+	  VertexShader = compile vs_4_0_level_9_3 VSMoon();
+	  PixelShader = compile ps_4_0_level_9_3 PSMoon9_3();
+   }
+}
+
 technique Clouds {
    pass Pass_0 {
 	  VertexShader = compile vs_4_0_level_9_1 VSSky();
 	  PixelShader = compile ps_4_0_level_9_1 PSClouds();
+   }
+}
+
+technique CloudsLevel9_3 {
+   pass Pass_0 {
+	  VertexShader = compile vs_4_0_level_9_3 VSSky();
+	  PixelShader = compile ps_4_0_level_9_3 PSClouds9_3();
    }
 }

@@ -54,6 +54,18 @@ struct PIXEL_INPUT
 
 ////////////////////    P I X E L   S H A D E R S    ///////////////////////////
 
+// Fast filmic tone curve (Narkowicz' ACES approximation), matching SceneryShader.fx and
+// SkyShader.fx so the cab is graded identically to the world seen through the windscreen.
+float3 ACESFilm(float3 x)
+{
+	float a = 2.51f;
+	float b = 0.03f;
+	float c = 2.43f;
+	float d = 0.59f;
+	float e = 0.14f;
+	return saturate((x * (a * x + b)) / (x * (c * x + d) + e));
+}
+
 float4 PSCabShader(PIXEL_INPUT In) : COLOR0
 {
 	float4 origColor = tex2D(ImageSampler, In.TexCoords) * In.Color;
@@ -75,7 +87,9 @@ float4 PSCabShader(PIXEL_INPUT In) : COLOR0
 		shadColor += origColor.rgb * lightEffect;
 	}
 
-	return float4(min(shadColor, origColor.rgb * 1.2), origColor.a);
+	// The same filmic curve as the scenery, so cockpit lighting matches what is outside. Alpha is
+	// left alone because the cab is alpha blended over the scene.
+	return float4(ACESFilm(min(shadColor, origColor.rgb * 1.2)), origColor.a);
 }
 
 ////////////////////    T E C H N I Q U E S    /////////////////////////////////

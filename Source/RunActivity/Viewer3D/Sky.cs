@@ -343,6 +343,7 @@ namespace Orts.Viewer3D
         readonly IEnumerator<EffectPass> ShaderPassesSky;
         readonly IEnumerator<EffectPass> ShaderPassesMoon;
         readonly IEnumerator<EffectPass> ShaderPassesClouds;
+        readonly bool Level9_3;
 
         public SkyMaterial(Viewer viewer)
            : base(viewer, null)
@@ -357,9 +358,12 @@ namespace Orts.Viewer3D
             MoonMask = SharedTextureManager.LoadInternal(Viewer.RenderProcess.GraphicsDevice, System.IO.Path.Combine(Viewer.ContentPath, "MoonMask.png"));
             CloudTexture = SharedTextureManager.LoadInternal(Viewer.RenderProcess.GraphicsDevice, System.IO.Path.Combine(Viewer.ContentPath, "Clouds01.png"));
 
-            ShaderPassesSky = SkyShader.Techniques["Sky"].Passes.GetEnumerator();
-            ShaderPassesMoon = SkyShader.Techniques["Moon"].Passes.GetEnumerator();
-            ShaderPassesClouds = SkyShader.Techniques["Clouds"].Passes.GetEnumerator();
+            // The filmic tone curve does not fit the level 9_1 sky pixel shaders, so it lives in
+            // separate shader model 3 techniques. Chosen by feature level like Terrain and Water.
+            Level9_3 = Viewer.Settings.IsDirectXFeatureLevelIncluded(ORTS.Settings.UserSettings.DirectXFeature.Level9_3);
+            ShaderPassesSky = SkyShader.Techniques[Level9_3 ? "SkyLevel9_3" : "Sky"].Passes.GetEnumerator();
+            ShaderPassesMoon = SkyShader.Techniques[Level9_3 ? "MoonLevel9_3" : "Moon"].Passes.GetEnumerator();
+            ShaderPassesClouds = SkyShader.Techniques[Level9_3 ? "CloudsLevel9_3" : "Clouds"].Passes.GetEnumerator();
 
             SkyShader.SkyMapTexture = SkyTexture;
             SkyShader.StarMapTexture = StarTextureN;
@@ -395,7 +399,7 @@ namespace Orts.Viewer3D
             SkyShader.SetViewMatrix(ref XNAViewMatrix);
 
             // Sky dome
-            SkyShader.CurrentTechnique = SkyShader.Techniques["Sky"];
+            SkyShader.CurrentTechnique = SkyShader.Techniques[Level9_3 ? "SkyLevel9_3" : "Sky"];
             Viewer.World.Sky.Primitive.Element = SkyPrimitive.SkyElement.Sky;
             graphicsDevice.BlendState = BlendState.Opaque;
             graphicsDevice.DepthStencilState = DepthStencilState.None;
@@ -413,7 +417,7 @@ namespace Orts.Viewer3D
             }
 
             // Moon
-            SkyShader.CurrentTechnique = SkyShader.Techniques["Moon"];
+            SkyShader.CurrentTechnique = SkyShader.Techniques[Level9_3 ? "MoonLevel9_3" : "Moon"];
             Viewer.World.Sky.Primitive.Element = SkyPrimitive.SkyElement.Moon;
             graphicsDevice.BlendState = BlendState.NonPremultiplied;
             graphicsDevice.RasterizerState = RasterizerState.CullClockwise;
@@ -431,7 +435,7 @@ namespace Orts.Viewer3D
             }
 
             // Clouds
-            SkyShader.CurrentTechnique = SkyShader.Techniques["Clouds"];
+            SkyShader.CurrentTechnique = SkyShader.Techniques[Level9_3 ? "CloudsLevel9_3" : "Clouds"];
             Viewer.World.Sky.Primitive.Element = SkyPrimitive.SkyElement.Clouds;
             graphicsDevice.RasterizerState = RasterizerState.CullCounterClockwise;
 

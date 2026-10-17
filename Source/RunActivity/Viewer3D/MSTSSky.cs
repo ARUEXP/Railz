@@ -482,6 +482,7 @@ namespace Orts.Viewer3D
         IEnumerator<EffectPass> ShaderPassesSky;
         IEnumerator<EffectPass> ShaderPassesMoon;
         List<IEnumerator<EffectPass>>ShaderPassesClouds = new List<IEnumerator<EffectPass>>();
+        bool Level9_3;
         private float mstsskytexturex;
         private float mstsskytexturey;
         private float mstscloudtexturex;
@@ -552,13 +553,16 @@ namespace Orts.Viewer3D
             MSTSSkyMoonMask = SharedTextureManager.LoadInternal(Viewer.RenderProcess.GraphicsDevice, System.IO.Path.Combine(Viewer.ContentPath, "MoonMask.png")); //ToDo:  No MSTS equivalent - will need to be fixed in MSTSSky.cs
             //MSTSSkyCloudTexture[0] = SharedTextureManager.Get(Viewer.RenderProcess.GraphicsDevice, System.IO.Path.Combine(Viewer.ContentPath, "Clouds01.png"));
 
-            ShaderPassesSky = MSTSSkyShader.Techniques["Sky"].Passes.GetEnumerator();
-            ShaderPassesMoon = MSTSSkyShader.Techniques["Moon"].Passes.GetEnumerator();
+            // The filmic tone curve does not fit the level 9_1 sky pixel shaders, so it lives in
+            // separate shader model 3 techniques. Chosen by feature level like Terrain and Water.
+            Level9_3 = Viewer.Settings.IsDirectXFeatureLevelIncluded(ORTS.Settings.UserSettings.DirectXFeature.Level9_3);
+            ShaderPassesSky = MSTSSkyShader.Techniques[Level9_3 ? "SkyLevel9_3" : "Sky"].Passes.GetEnumerator();
+            ShaderPassesMoon = MSTSSkyShader.Techniques[Level9_3 ? "MoonLevel9_3" : "Moon"].Passes.GetEnumerator();
 
 
             for (int i = 0; i < Viewer.ENVFile.SkyLayers.Count - 2; i++)
             {
-                ShaderPassesClouds.Add(MSTSSkyShader.Techniques["Clouds"].Passes.GetEnumerator());
+                ShaderPassesClouds.Add(MSTSSkyShader.Techniques[Level9_3 ? "CloudsLevel9_3" : "Clouds"].Passes.GetEnumerator());
             }
 
             MSTSSkyShader.SkyMapTexture = MSTSDayTexture;
@@ -594,7 +598,7 @@ namespace Orts.Viewer3D
             graphicsDevice.DepthStencilState = DepthStencilState.DepthRead;
             Matrix viewXNASkyProj = XNAViewMatrix * Camera.XNASkyProjection;
 
-            MSTSSkyShader.CurrentTechnique = MSTSSkyShader.Techniques["Sky"];
+            MSTSSkyShader.CurrentTechnique = MSTSSkyShader.Techniques[Level9_3 ? "SkyLevel9_3" : "Sky"];
             Viewer.World.MSTSSky.MSTSSkyMesh.drawIndex = 1;
             MSTSSkyShader.SetViewMatrix(ref XNAViewMatrix);
             ShaderPassesSky.Reset();
@@ -608,7 +612,7 @@ namespace Orts.Viewer3D
                     item.RenderPrimitive.Draw(graphicsDevice);
                 }
             }
-            MSTSSkyShader.CurrentTechnique = MSTSSkyShader.Techniques["Moon"];
+            MSTSSkyShader.CurrentTechnique = MSTSSkyShader.Techniques[Level9_3 ? "MoonLevel9_3" : "Moon"];
             Viewer.World.MSTSSky.MSTSSkyMesh.drawIndex = 2;
 
             graphicsDevice.BlendState = BlendState.NonPremultiplied;
@@ -636,7 +640,7 @@ namespace Orts.Viewer3D
                 if (i == 0)
                 {
 
-                    MSTSSkyShader.CurrentTechnique = MSTSSkyShader.Techniques["Clouds"];
+                    MSTSSkyShader.CurrentTechnique = MSTSSkyShader.Techniques[Level9_3 ? "CloudsLevel9_3" : "Clouds"];
                     Viewer.World.MSTSSky.MSTSSkyMesh.drawIndex = 3;
 
                     graphicsDevice.RasterizerState = RasterizerState.CullCounterClockwise;

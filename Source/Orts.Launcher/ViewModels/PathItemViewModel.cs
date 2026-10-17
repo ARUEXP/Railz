@@ -31,12 +31,20 @@ namespace Orts.Launcher.ViewModels
 
         public string Name => Path.Name;
 
-        public string StartStation => Path.Start;
+        /// <summary>"From A → To B" when the .pat could be read, otherwise the file's own name.</summary>
+        public string Label
+        {
+            get
+            {
+                var start = LoaderText.Friendly(Path.Start, string.Empty);
+                var end = LoaderText.Friendly(Path.End, string.Empty);
 
-        public string EndStation => Path.End;
+                return start.Length > 0 && end.Length > 0
+                    ? $"From {start} \u2192 To {end}"
+                    : LoaderText.Friendly(Path.Name, "Starting location", FilePath);
+            }
+        }
 
         public string FilePath => Path.FilePath;
-
-        public override string ToString() => $"{StartStation} \u2192 {EndStation}";
     }
 }

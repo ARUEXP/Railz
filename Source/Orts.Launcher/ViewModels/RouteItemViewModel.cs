@@ -55,7 +55,7 @@ namespace Orts.Launcher.ViewModels
         /// <summary>Installation profile this route belongs to (needed to resolve trains and activities).</summary>
         public ORTS.Menu.Folder Folder => _folder;
 
-        public string Name => Route.Name;
+        public string Name => LoaderText.Friendly(Route.Name, "Unnamed Route", Route.Path);
 
         public string Description => string.IsNullOrWhiteSpace(Route.Description)
             ? "No description is available for this route."

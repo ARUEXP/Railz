@@ -34,9 +34,11 @@ namespace Orts.Launcher.ViewModels
 
         public Consist Consist { get; }
 
-        public string Name => Consist.Name;
+        public string Name => LoaderText.Friendly(Consist.Name, "Custom Consist", FilePath);
 
-        public string LocomotiveName => Consist.Locomotive?.Name ?? "- Any Locomotive -";
+        public string LocomotiveName => Consist.Locomotive == null
+            ? "Any Locomotive"
+            : LoaderText.Friendly(Consist.Locomotive.Name, "Custom Locomotive", LocomotivePath);
 
         /// <summary>Full path of the lead locomotive's .eng file, or null.</summary>
         public string? LocomotivePath => Consist.Locomotive?.FilePath;
@@ -54,8 +56,11 @@ namespace Orts.Launcher.ViewModels
         public int? CarCount
         {
             get => _carCount;
-            private set => SetProperty(ref _carCount, value);
+            private set { if (SetProperty(ref _carCount, value)) OnPropertyChanged(nameof(HasCarCount)); }
         }
+
+        /// <summary>False when the consist could not be read, so the car count badge stays hidden.</summary>
+        public bool HasCarCount => _carCount.HasValue;
 
         /// <summary>
         /// Reads the wagon count and power type. Neither is exposed by ORTS.Menu, so the

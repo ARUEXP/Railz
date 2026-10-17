@@ -55,9 +55,6 @@ namespace Orts.Launcher.ViewModels
             RoutesView = CollectionViewSource.GetDefaultView(Routes);
             RoutesView.Filter = o => MatchesSearch((RouteItemViewModel)o);
             Routes.CollectionChanged += (_, __) => OnPropertyChanged(nameof(EmptyStateMessage));
-
-            ConsistsView = CollectionViewSource.GetDefaultView(Consists);
-            ConsistsView.Filter = o => MatchesConsistSearch((ConsistItemViewModel)o);
         }
 
         public ObservableCollection<FolderItemViewModel> Folders { get; } = new ObservableCollection<FolderItemViewModel>();
@@ -72,9 +69,6 @@ namespace Orts.Launcher.ViewModels
         public ObservableCollection<ConsistItemViewModel> Consists { get; } = new ObservableCollection<ConsistItemViewModel>();
 
         public ObservableCollection<PathItemViewModel> Paths { get; } = new ObservableCollection<PathItemViewModel>();
-
-        /// <summary>Searchable/filterable view over <see cref="Consists"/>.</summary>
-        public ICollectionView ConsistsView { get; }
 
         ActivityItemViewModel? _selectedActivity;
         public ActivityItemViewModel? SelectedActivity
@@ -160,19 +154,19 @@ namespace Orts.Launcher.ViewModels
         public OptionItemViewModel SelectedTimeOption
         {
             get => _timeOption;
-            set { if (value != null && SetProperty(ref _timeOption, value)) { OnPropertyChanged(nameof(SelectedTime)); PersistSelection(); } }
+            set { if (value != null && SetProperty(ref _timeOption, value)) { OnPropertyChanged(nameof(SelectedTime)); PersistSelection(); NotifyLaunchState(); } }
         }
 
         public OptionItemViewModel SelectedSeasonOption
         {
             get => _seasonOption;
-            set { if (value != null && SetProperty(ref _seasonOption, value)) { OnPropertyChanged(nameof(SelectedSeason)); PersistSelection(); } }
+            set { if (value != null && SetProperty(ref _seasonOption, value)) { OnPropertyChanged(nameof(SelectedSeason)); PersistSelection(); NotifyLaunchState(); } }
         }
 
         public OptionItemViewModel SelectedWeatherOption
         {
             get => _weatherOption;
-            set { if (value != null && SetProperty(ref _weatherOption, value)) { OnPropertyChanged(nameof(SelectedWeather)); PersistSelection(); } }
+            set { if (value != null && SetProperty(ref _weatherOption, value)) { OnPropertyChanged(nameof(SelectedWeather)); PersistSelection(); NotifyLaunchState(); } }
         }
 
         /// <summary>Departure time, in the "H:MM" form the simulator parses.</summary>
@@ -181,13 +175,6 @@ namespace Orts.Launcher.ViewModels
         public SeasonType SelectedSeason => (SeasonType)_seasonOption.Value;
 
         public WeatherType SelectedWeather => (WeatherType)_weatherOption.Value;
-
-        string _consistSearchText = string.Empty;
-        public string ConsistSearchText
-        {
-            get => _consistSearchText;
-            set { if (SetProperty(ref _consistSearchText, value ?? string.Empty)) ConsistsView.Refresh(); }
-        }
 
         FolderItemViewModel? _selectedFolder;
         public FolderItemViewModel? SelectedFolder
@@ -413,7 +400,7 @@ namespace Orts.Launcher.ViewModels
 
                 RestoreRouteDetailSelections();
 
-                StatusMessage = $"{Activities.Count} missions, {Paths.Count} places, {Consists.Count} trains.";
+                StatusMessage = $"Missions: {Activities.Count}   Starting points: {Paths.Count}   Trains: {Consists.Count}";
                 NotifyLaunchState();
             }
             catch (Exception ex)
@@ -595,11 +582,37 @@ namespace Orts.Launcher.ViewModels
         public string LaunchButtonLabel =>
             _mode == LauncherMode.Activity ? "\u25B6  Start Mission" : "\u25B6  Drive Now";
 
+        /// <summary>
+        /// One line for the pinned footer: the blocker if there is one, otherwise a plain-English
+        /// summary of what the current setup will do.
+        /// </summary>
+        public string DeckStatusText
+        {
+            get
+            {
+                var problem = LaunchProblem;
+                if (problem.Length > 0)
+                    return problem;
+
+                if (_mode == LauncherMode.Activity)
+                    return $"Ready to start {_selectedActivity!.Name}.";
+
+                if (_mode == LauncherMode.QuickDrive)
+                    return $"Ready to drive \u2014 {_seasonOption.Label} conditions, {_timeOption.Label}, {_weatherOption.Label}.";
+
+                return string.Empty;
+            }
+        }
+
+        public bool DeckStatusIsWarning => LaunchProblem.Length > 0;
+
         void NotifyLaunchState()
         {
             OnPropertyChanged(nameof(LaunchArguments));
             OnPropertyChanged(nameof(LaunchProblem));
             OnPropertyChanged(nameof(LaunchButtonLabel));
+            OnPropertyChanged(nameof(DeckStatusText));
+            OnPropertyChanged(nameof(DeckStatusIsWarning));
         }
 
         /// <summary>Starts the simulator and returns once it has exited.</summary>
@@ -628,15 +641,6 @@ namespace Orts.Launcher.ViewModels
 
             return (route.Name?.IndexOf(SearchText, StringComparison.OrdinalIgnoreCase) >= 0)
                 || (route.Description?.IndexOf(SearchText, StringComparison.OrdinalIgnoreCase) >= 0);
-        }
-
-        bool MatchesConsistSearch(ConsistItemViewModel consist)
-        {
-            if (string.IsNullOrWhiteSpace(ConsistSearchText))
-                return true;
-
-            return (consist.Name?.IndexOf(ConsistSearchText, StringComparison.OrdinalIgnoreCase) >= 0)
-                || (consist.LocomotiveName?.IndexOf(ConsistSearchText, StringComparison.OrdinalIgnoreCase) >= 0);
         }
 
         /// <summary>Stored selections as they were when the launcher started.</summary>

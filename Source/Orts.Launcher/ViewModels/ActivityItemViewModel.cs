@@ -30,7 +30,7 @@ namespace Orts.Launcher.ViewModels
 
         public Activity Activity { get; }
 
-        public string Name => Activity.Name;
+        public string Name => LoaderText.Friendly(Activity.Name, "Unnamed Mission", FilePath);
 
         public string Description => string.IsNullOrWhiteSpace(Activity.Description)
             ? "No description."

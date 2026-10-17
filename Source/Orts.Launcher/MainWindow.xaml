@@ -5,8 +5,8 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d"
         Title="Open Rails"
-        Width="1080" Height="720"
-        MinWidth="800" MinHeight="520"
+        Width="1180" Height="760"
+        MinWidth="900" MinHeight="560"
         WindowStartupLocation="CenterScreen"
         Background="{StaticResource WindowBackgroundBrush}"
         Foreground="{StaticResource PrimaryTextBrush}"
@@ -14,6 +14,45 @@
         UseLayoutRounding="True"
         SnapsToDevicePixels="True"
         TextOptions.TextFormattingMode="Display">
+    <Window.Resources>
+        <Style x:Key="RouteItemContainer" TargetType="ListBoxItem">
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="Margin" Value="0,0,0,6" />
+            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ListBoxItem">
+                        <Border x:Name="Root"
+                                Background="Transparent"
+                                CornerRadius="8"
+                                BorderThickness="1"
+                                BorderBrush="Transparent">
+                            <ContentPresenter />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Root" Property="Background" Value="#202020" />
+                            </Trigger>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="Root" Property="BorderBrush" Value="{StaticResource AccentBrush}" />
+                                <Setter TargetName="Root" Property="Background" Value="#1B2430" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="BadgeBorder" TargetType="Border">
+            <Setter Property="Background" Value="#1B2430" />
+            <Setter Property="BorderBrush" Value="{StaticResource PanelBorderBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="10" />
+            <Setter Property="Padding" Value="10,3" />
+            <Setter Property="Margin" Value="0,0,8,0" />
+        </Style>
+    </Window.Resources>
+
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
@@ -26,7 +65,7 @@
                 Background="{StaticResource SurfaceBrush}"
                 BorderBrush="{StaticResource PanelBorderBrush}"
                 BorderThickness="0,0,0,1"
-                Padding="24,16">
+                Padding="24,14">
             <StackPanel>
                 <TextBlock Text="Open Rails"
                            FontSize="20" FontWeight="SemiBold"
@@ -37,25 +76,178 @@
             </StackPanel>
         </Border>
 
-        <!-- Placeholder content region (route browsing arrives in Milestone 2) -->
-        <Border Grid.Row="1" Background="{StaticResource WindowBackgroundBrush}">
-            <Border Background="{StaticResource SurfaceAltBrush}"
+        <!-- Content: profile/route list + route detail -->
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="360" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+
+            <!-- Left: profile selector and route cards -->
+            <Border Grid.Column="0"
+                    Background="{StaticResource SurfaceAltBrush}"
                     BorderBrush="{StaticResource PanelBorderBrush}"
-                    BorderThickness="1"
-                    CornerRadius="8"
-                    Margin="24">
-                <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
-                    <TextBlock Text="Launcher shell ready"
-                               FontSize="16" FontWeight="SemiBold"
-                               HorizontalAlignment="Center"
-                               Foreground="{StaticResource PrimaryTextBrush}" />
-                    <TextBlock Text="Route browsing will be added in Milestone 2."
-                               FontSize="12" Margin="0,8,0,0"
-                               HorizontalAlignment="Center"
-                               Foreground="{StaticResource SecondaryTextBrush}" />
-                </StackPanel>
+                    BorderThickness="0,0,1,0"
+                    Padding="16">
+                <DockPanel>
+                    <StackPanel DockPanel.Dock="Top" Margin="0,0,0,12">
+                        <TextBlock Text="Installation Profile"
+                                   FontSize="11" Margin="0,0,0,5"
+                                   Foreground="{StaticResource SecondaryTextBrush}" />
+                        <ComboBox ItemsSource="{Binding Folders}"
+                                  SelectedItem="{Binding SelectedFolder, Mode=TwoWay}"
+                                  DisplayMemberPath="Name"
+                                  Margin="0,0,0,12">
+                            <ComboBox.Style>
+                                <Style TargetType="ComboBox">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsLoading}" Value="True">
+                                            <Setter Property="IsEnabled" Value="False" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </ComboBox.Style>
+                        </ComboBox>
+
+                        <TextBlock Text="Routes"
+                                   FontSize="11" Margin="0,0,0,5"
+                                   Foreground="{StaticResource SecondaryTextBrush}" />
+                        <TextBox Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
+                                 ToolTip="Filter routes by name or description" />
+                    </StackPanel>
+
+                    <ListBox ItemsSource="{Binding RoutesView}"
+                             SelectedItem="{Binding SelectedRoute, Mode=TwoWay}"
+                             ItemContainerStyle="{StaticResource RouteItemContainer}"
+                             Background="Transparent"
+                             BorderThickness="0"
+                             ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <Border Background="{StaticResource SurfaceBrush}"
+                                        BorderBrush="{StaticResource PanelBorderBrush}"
+                                        BorderThickness="1"
+                                        CornerRadius="8"
+                                        Padding="12,10">
+                                    <StackPanel>
+                                        <TextBlock Text="{Binding Name}"
+                                                   FontSize="14" FontWeight="SemiBold"
+                                                   TextTrimming="CharacterEllipsis"
+                                                   Foreground="{StaticResource PrimaryTextBrush}" />
+                                        <TextBlock Text="{Binding Description}"
+                                                   FontSize="11" Margin="0,4,0,0" MaxHeight="30"
+                                                   TextWrapping="Wrap" TextTrimming="CharacterEllipsis"
+                                                   Foreground="{StaticResource SecondaryTextBrush}" />
+                                        <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                                            <TextBlock FontSize="11"
+                                                       Foreground="{StaticResource AccentBrush}"
+                                                       Text="{Binding PathCount, StringFormat={}{0} paths, TargetNullValue=—}" />
+                                            <TextBlock FontSize="11" Margin="10,0,0,0"
+                                                       Foreground="{StaticResource SecondaryTextBrush}"
+                                                       Text="{Binding ActivityCount, StringFormat={}{0} activities, TargetNullValue=—}" />
+                                        </StackPanel>
+                                    </StackPanel>
+                                </Border>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </DockPanel>
             </Border>
-        </Border>
+
+            <!-- Right: route detail -->
+            <Grid Grid.Column="1">
+                <!-- Empty state -->
+                <TextBlock Text="Select a route to see its details."
+                           FontSize="14"
+                           HorizontalAlignment="Center" VerticalAlignment="Center"
+                           Foreground="{StaticResource SecondaryTextBrush}">
+                    <TextBlock.Style>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="Visibility" Value="Collapsed" />
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding SelectedRoute}" Value="{x:Null}">
+                                    <Setter Property="Visibility" Value="Visible" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </TextBlock.Style>
+                </TextBlock>
+
+                <ScrollViewer VerticalScrollBarVisibility="Auto"
+                              Padding="24">
+                    <ScrollViewer.Style>
+                        <Style TargetType="ScrollViewer">
+                            <Setter Property="Visibility" Value="Visible" />
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding SelectedRoute}" Value="{x:Null}">
+                                    <Setter Property="Visibility" Value="Collapsed" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </ScrollViewer.Style>
+                    <StackPanel MaxWidth="820" HorizontalAlignment="Left">
+                        <!-- Hero artwork / themed fallback banner -->
+                        <Border Height="220" CornerRadius="10"
+                                BorderBrush="{StaticResource PanelBorderBrush}"
+                                BorderThickness="1"
+                                ClipToBounds="True">
+                            <Grid>
+                                <Grid.Background>
+                                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                        <GradientStop Color="#1E1E1E" Offset="0" />
+                                        <GradientStop Color="#232B36" Offset="1" />
+                                    </LinearGradientBrush>
+                                </Grid.Background>
+                                <TextBlock Text="OPEN RAILS"
+                                           FontSize="28" FontWeight="Bold"
+                                           HorizontalAlignment="Center" VerticalAlignment="Center"
+                                           Foreground="#2E3946" />
+                                <Image Source="{Binding SelectedRoute.HeroImage}"
+                                       Stretch="UniformToFill"
+                                       Visibility="{Binding SelectedRoute.HasHeroImage, Converter={StaticResource BoolToVis}}" />
+                            </Grid>
+                        </Border>
+
+                        <TextBlock Text="{Binding SelectedRoute.Name}"
+                                   FontSize="26" FontWeight="SemiBold" Margin="0,18,0,0"
+                                   TextWrapping="Wrap"
+                                   Foreground="{StaticResource PrimaryTextBrush}" />
+
+                        <TextBlock Text="{Binding SelectedRoute.FolderPath}"
+                                   FontSize="11" Margin="0,4,0,0"
+                                   TextTrimming="CharacterEllipsis"
+                                   Foreground="{StaticResource SecondaryTextBrush}" />
+
+                        <!-- Discovery badges -->
+                        <StackPanel Orientation="Horizontal" Margin="0,16,0,0">
+                            <Border Style="{StaticResource BadgeBorder}">
+                                <TextBlock FontSize="12"
+                                           Text="{Binding SelectedRoute.PathCount, StringFormat={}{0} paths discovered, TargetNullValue=Scanning paths…}" />
+                            </Border>
+                            <Border Style="{StaticResource BadgeBorder}">
+                                <TextBlock FontSize="12"
+                                           Text="{Binding SelectedRoute.ActivityCount, StringFormat={}{0} activities discovered, TargetNullValue=Scanning activities…}" />
+                            </Border>
+                        </StackPanel>
+
+                        <TextBlock Text="Description"
+                                   FontSize="11" Margin="0,22,0,6"
+                                   Foreground="{StaticResource SecondaryTextBrush}" />
+                        <Border Background="{StaticResource SurfaceAltBrush}"
+                                BorderBrush="{StaticResource PanelBorderBrush}"
+                                BorderThickness="1" CornerRadius="8" Padding="14">
+                            <TextBlock Text="{Binding SelectedRoute.Description}"
+                                       FontSize="12.5" TextWrapping="Wrap"
+                                       Foreground="{StaticResource PrimaryTextBrush}" />
+                        </Border>
+
+                        <TextBlock Text="Activity, consist and timetable selection, and launching the simulation, arrive in later milestones."
+                                   FontSize="11" Margin="0,20,0,0" TextWrapping="Wrap"
+                                   Foreground="{StaticResource SecondaryTextBrush}" />
+                    </StackPanel>
+                </ScrollViewer>
+            </Grid>
+        </Grid>
 
         <!-- Status bar -->
         <Border Grid.Row="2"
@@ -63,9 +255,23 @@
                 BorderBrush="{StaticResource PanelBorderBrush}"
                 BorderThickness="0,1,0,0"
                 Padding="24,10">
-            <TextBlock x:Name="StatusText"
-                       FontSize="12"
-                       Foreground="{StaticResource SecondaryTextBrush}" />
+            <DockPanel>
+                <TextBlock DockPanel.Dock="Right"
+                           FontSize="12"
+                           Foreground="{StaticResource SecondaryTextBrush}"
+                           Text="{Binding StatusMessage}" />
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <TextBlock FontSize="12" Margin="0,0,16,0"
+                               Foreground="{StaticResource SecondaryTextBrush}"
+                               Text="{Binding Folders.Count, StringFormat={}{0} profiles}" />
+                    <TextBlock FontSize="12" Margin="0,0,16,0"
+                               Foreground="{StaticResource SecondaryTextBrush}"
+                               Text="{Binding Routes.Count, StringFormat={}{0} routes}" />
+                    <ProgressBar Width="90" Height="4" IsIndeterminate="True"
+                                 VerticalAlignment="Center"
+                                 Visibility="{Binding IsLoading, Converter={StaticResource BoolToVis}}" />
+                </StackPanel>
+            </DockPanel>
         </Border>
     </Grid>
 </Window>

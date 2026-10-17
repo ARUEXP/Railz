@@ -16,18 +16,24 @@
 // along with Open Rails.  If not, see <http://www.gnu.org/licenses/>.
 
 using System.Windows;
+using Orts.Launcher.ViewModels;
 using ORTS.Common;
 
 namespace Orts.Launcher
 {
     public partial class MainWindow : Window
     {
+        readonly MainViewModel _viewModel = new MainViewModel();
+
         public MainWindow()
         {
             InitializeComponent();
 
             Title = $"Open Rails \u2014 Modern Launcher  {VersionInfo.VersionOrBuild}";
-            StatusText.Text = $"Open Rails modernization prototype  \u2022  {VersionInfo.VersionOrBuild}";
+            DataContext = _viewModel;
+
+            // Discovery touches disk and parses content, so it starts after the window is shown.
+            Loaded += async (_, __) => await _viewModel.LoadFoldersAsync();
         }
     }
 }

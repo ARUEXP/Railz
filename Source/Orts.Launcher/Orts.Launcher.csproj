@@ -6,6 +6,8 @@
     <UseWPF>true</UseWPF>
     <UseWindowsForms>false</UseWindowsForms>
     <Nullable>enable</Nullable>
+    <!-- Run on the installed .NET 8 desktop runtime instead of requiring the obsolete .NET 6 runtime. -->
+    <RollForward>Major</RollForward>
     <AssemblyTitle>Open Rails Modern Launcher</AssemblyTitle>
     <Description>Open Rails Transport Simulator</Description>
     <Company>Open Rails</Company>

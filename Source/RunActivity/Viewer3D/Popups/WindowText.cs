@@ -206,6 +206,18 @@ namespace Orts.Viewer3D.Popups
             Draw(spriteBatch, position, offset, 0, text, align, color, Color.Black);
         }
 
+        /// <summary>
+        /// Draws <paramref name="text"/> without allocating, reusing <paramref name="chIndexes"/> as scratch
+        /// space. The caller keeps the buffer alive; it must be at least <c>text.Length</c> long.
+        /// </summary>
+        [CallOnThread("Render")]
+        public void Draw(SpriteBatch spriteBatch, Rectangle position, Point offset, string text, LabelAlignment align, Color color, int[] chIndexes)
+        {
+            offset.X += position.Location.X;
+            offset.Y += position.Location.Y;
+            Draw(spriteBatch, offset, 0, position.Width, text, align, color, Color.Black, chIndexes);
+        }
+
         [CallOnThread("Render")]
         public void Draw(SpriteBatch spriteBatch, Rectangle position, Point offset, string text, LabelAlignment align, Color color, float rotation)
         {
@@ -229,13 +241,14 @@ namespace Orts.Viewer3D.Popups
         }
 
         [CallOnThread("Render")]
-        public void Draw(SpriteBatch spriteBatch, Point position, float rotation, int width, string text, LabelAlignment align, Color color, Color outline)
+        public void Draw(SpriteBatch spriteBatch, Point position, float rotation, int width, string text, LabelAlignment align, Color color, Color outline, int[] chIndexes = null)
         {
             if (text == null) return;
             EnsureCharacterData(text);
             var characters = Characters;
 
-            var chIndexes = new int[text.Length];
+            if ((chIndexes == null) || (chIndexes.Length < text.Length))
+                chIndexes = new int[text.Length];
             for (var i = 0; i < text.Length; i++)
                 chIndexes[i] = characters.IndexOfCharacter(text[i]);
 

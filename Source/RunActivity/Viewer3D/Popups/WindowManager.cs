@@ -60,6 +60,8 @@ namespace Orts.Viewer3D.Popups
         public readonly WindowTextFont TextFontSmall;
         public readonly WindowTextFont TextFontSmallOutlined;
 
+        public readonly WindowTextFont TextFontLargeBold;
+
         public Label3DMaterial Label3DMaterial { get; private set; }
 
         readonly Material WindowManagerMaterial;
@@ -88,6 +90,7 @@ namespace Orts.Viewer3D.Popups
             TextFontMonoSpacedOutlined = TextManager.GetScaled("Consolas", 10, System.Drawing.FontStyle.Regular, 1);
             TextFontSmall = TextManager.GetScaled("Arial", 8, System.Drawing.FontStyle.Regular);
             TextFontSmallOutlined = TextManager.GetScaled("Arial", 8, System.Drawing.FontStyle.Regular, 1);
+            TextFontLargeBold = TextManager.GetScaled("Arial", 22, System.Drawing.FontStyle.Bold);
 
             SpriteBatch = new SpriteBatch(Viewer.GraphicsDevice);
 

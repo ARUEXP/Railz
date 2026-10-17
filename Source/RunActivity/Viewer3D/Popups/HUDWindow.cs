@@ -54,6 +54,7 @@ namespace Orts.Viewer3D.Popups
         public readonly int TextPagesLength;
         readonly WindowTextFont TextFont;
         readonly HUDGraphMaterial HUDGraphMaterial;
+        readonly ModernDrivingHUD ModernHUD;
 
         public int TextPage;
         int LocomotivePage = 2;
@@ -104,6 +105,8 @@ namespace Orts.Viewer3D.Popups
 
             TextFont = owner.TextFontDefaultOutlined;
             ColumnWidth *= TextFont.Height;
+
+            ModernHUD = new ModernDrivingHUD(owner);
 
             HUDGraphMaterial = (HUDGraphMaterial)Viewer.MaterialManager.Load("Debug");
 
@@ -254,6 +257,9 @@ namespace Orts.Viewer3D.Popups
         {
             base.PrepareFrame(elapsedTime, updateFull);
 
+            if (Visible)
+                ModernHUD.Prepare(updateFull);
+
             if (updateFull)
             {
                 var table = new TableData() { Cells = new string[TextTable.Cells.GetLength(0), TextTable.Cells.GetLength(1)] };
@@ -279,6 +285,14 @@ namespace Orts.Viewer3D.Popups
 
         public override void Draw(SpriteBatch spriteBatch)
         {
+            // Page 0 is the driver's basic HUD. Draw the modern overlay instead of the legacy text
+            // matrix; the detail pages below it keep the text table for debugging.
+            if (TextPage == 0)
+            {
+                ModernHUD.Draw(spriteBatch);
+                return;
+            }
+
             // Completely customise the rendering of the HUD - don't call base.Draw(spriteBatch).
             for (var row = 0; row < TextTable.Cells.GetLength(0); row++)
             {

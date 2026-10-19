@@ -854,61 +854,69 @@ namespace Orts.Simulation.RollingStocks
             if (!File.Exists(cvfFilePath))
                 return null;
 
-            var cvfFile = new CabViewFile(cvfFilePath, cvfBasePath);
-            var viewPoint = new ViewPoint();
-            if (cvfFile.Locations.Count <= 0) return null; //check for Protrain's dummy cab
-            // Set up camera locations for the cab views
-            for (int i = 0; i < cvfFile.Locations.Count; ++i)
+            try
             {
-                if (i >= cvfFile.Locations.Count || i >= cvfFile.Directions.Count)
+                var cvfFile = new CabViewFile(cvfFilePath, cvfBasePath);
+                var viewPoint = new ViewPoint();
+                if (cvfFile.Locations.Count <= 0) return null; //check for Protrain's dummy cab
+                // Set up camera locations for the cab views
+                for (int i = 0; i < cvfFile.Locations.Count; ++i)
                 {
-                    Trace.TraceWarning("Skipped cab view camera {1} missing Position and Direction in {0}", cvfFilePath, i);
-                    break;
+                    if (i >= cvfFile.Locations.Count || i >= cvfFile.Directions.Count)
+                    {
+                        Trace.TraceWarning("Skipped cab view camera {1} missing Position and Direction in {0}", cvfFilePath, i);
+                        break;
+                    }
+                    viewPoint = new ViewPoint();
+                    viewPoint.Location = cvfFile.Locations[i];
+                    viewPoint.StartDirection = cvfFile.Directions[i];
+                    viewPoint.RotationLimit = new Vector3(0, 0, 0);  // cab views have a fixed head position
+                    viewPointList.Add(viewPoint);
                 }
-                viewPoint = new ViewPoint();
-                viewPoint.Location = cvfFile.Locations[i];
-                viewPoint.StartDirection = cvfFile.Directions[i];
-                viewPoint.RotationLimit = new Vector3(0, 0, 0);  // cab views have a fixed head position
-                viewPointList.Add(viewPoint);
-            }
-            var cabViewType = new CabViewType();
-            cabViewType = ((viewPointList[0].StartDirection.Y >= 90 && viewPointList[0].StartDirection.Y <= 270)
-                || (viewPointList[0].StartDirection.Y <= -90 && viewPointList[0].StartDirection.Y >= -270)) ? CabViewType.Rear : CabViewType.Front;
-            var wag = this as MSTSWagon;
-            var wagFolderSlash = Path.GetDirectoryName(wag.WagFilePath) + @"\";
-            string shapeFilePath;
-            bool boundingLimitsFound = false;
-            ShapeDescriptorFile shapeFile = new ShapeDescriptorFile();
-            if (wag.FreightShapeFileName != null)
-            {
-                shapeFilePath = wagFolderSlash + wag.FreightShapeFileName;
-                if (shapeFilePath != null && File.Exists(shapeFilePath + "d"))
+                var cabViewType = new CabViewType();
+                cabViewType = ((viewPointList[0].StartDirection.Y >= 90 && viewPointList[0].StartDirection.Y <= 270)
+                    || (viewPointList[0].StartDirection.Y <= -90 && viewPointList[0].StartDirection.Y >= -270)) ? CabViewType.Rear : CabViewType.Front;
+                var wag = this as MSTSWagon;
+                var wagFolderSlash = Path.GetDirectoryName(wag.WagFilePath) + @"\";
+                string shapeFilePath;
+                bool boundingLimitsFound = false;
+                ShapeDescriptorFile shapeFile = new ShapeDescriptorFile();
+                if (wag.FreightShapeFileName != null)
                 {
-                    shapeFile = new ShapeDescriptorFile(shapeFilePath + "d");
-                    if (shapeFile.shape.ESD_Bounding_Box != null) boundingLimitsFound = true;
+                    shapeFilePath = wagFolderSlash + wag.FreightShapeFileName;
+                    if (shapeFilePath != null && File.Exists(shapeFilePath + "d"))
+                    {
+                        shapeFile = new ShapeDescriptorFile(shapeFilePath + "d");
+                        if (shapeFile.shape.ESD_Bounding_Box != null) boundingLimitsFound = true;
+                    }
                 }
-            }
-            if (!boundingLimitsFound)
-            {
-                shapeFilePath = wagFolderSlash + wag.MainShapeFileName;
-                if (shapeFilePath != null && File.Exists(shapeFilePath + "d"))
+                if (!boundingLimitsFound)
                 {
-                    shapeFile = new ShapeDescriptorFile(shapeFilePath + "d");
-                    if (shapeFile.shape.ESD_Bounding_Box != null) boundingLimitsFound = true;
+                    shapeFilePath = wagFolderSlash + wag.MainShapeFileName;
+                    if (shapeFilePath != null && File.Exists(shapeFilePath + "d"))
+                    {
+                        shapeFile = new ShapeDescriptorFile(shapeFilePath + "d");
+                        if (shapeFile.shape.ESD_Bounding_Box != null) boundingLimitsFound = true;
+                    }
                 }
+                if (boundingLimitsFound)
+                {
+                    if (cabViewType == CabViewType.Front)
+                        noseAhead = (viewPointList[0].Location.Z + 0.5f < shapeFile.shape.ESD_Bounding_Box.Max.Z) ? true : false;
+                    else if (cabViewType == CabViewType.Rear)
+                        noseAhead = (viewPointList[0].Location.Z - 0.5f > shapeFile.shape.ESD_Bounding_Box.Min.Z) ? true : false;
+                }
+                if (!(this is MSTSSteamLocomotive))
+                {
+                    InitializeFromORTSSpecific(cvfFilePath, extendedCVF);
+                }
+                return new CabView(cvfFile, viewPointList, extendedCVF, cabViewType, noseAhead);
             }
-            if (boundingLimitsFound)
+            catch (Exception ex)
             {
-                if (cabViewType == CabViewType.Front)
-                    noseAhead = (viewPointList[0].Location.Z + 0.5f < shapeFile.shape.ESD_Bounding_Box.Max.Z) ? true : false;
-                else if (cabViewType == CabViewType.Rear)
-                    noseAhead = (viewPointList[0].Location.Z - 0.5f > shapeFile.shape.ESD_Bounding_Box.Min.Z) ? true : false;
+                Trace.TraceWarning("Failed to build CabView from {0}: {1}", cvfFilePath, ex.Message);
+                return null;
             }
-            if (!(this is MSTSSteamLocomotive))
-            {
-                InitializeFromORTSSpecific(cvfFilePath, extendedCVF);
-            }
-            return new CabView(cvfFile, viewPointList, extendedCVF, cabViewType, noseAhead);
         }
 
         protected CabView3D BuildCab3DView()
@@ -924,31 +932,39 @@ namespace Orts.Simulation.RollingStocks
             if (!File.Exists(shapeFilePath))
                 return null;
 
-            var cvfBasePath = cab3dBasePath;
-            var cvfFilePath = Path.Combine(cvfBasePath, Path.ChangeExtension(Cab3DShapeFileName, "cvf"));
-            if (!File.Exists(cvfFilePath))
+            try
             {
-                cvfFilePath = Path.Combine(cvfBasePath, CVFFileName);
+                var cvfBasePath = cab3dBasePath;
+                var cvfFilePath = Path.Combine(cvfBasePath, Path.ChangeExtension(Cab3DShapeFileName, "cvf"));
                 if (!File.Exists(cvfFilePath))
                 {
-                    cvfBasePath = Path.Combine(Path.GetDirectoryName(WagFilePath), "CABVIEW");
                     cvfFilePath = Path.Combine(cvfBasePath, CVFFileName);
                     if (!File.Exists(cvfFilePath))
-                        return null;
+                    {
+                        cvfBasePath = Path.Combine(Path.GetDirectoryName(WagFilePath), "CABVIEW");
+                        cvfFilePath = Path.Combine(cvfBasePath, CVFFileName);
+                        if (!File.Exists(cvfFilePath))
+                            return null;
+                    }
                 }
+                var cvfFile = new CabViewFile(cvfFilePath, cvfBasePath);
+                if (!(this is MSTSSteamLocomotive))
+                    InitializeFromORTSSpecific(cvfFilePath, extendedCVF);
+
+                var cabViewAngle = CabViewpoints[0].StartDirection.Y;
+                var cabViewType = (cabViewAngle >= 90 && cabViewAngle <= 270) || (cabViewAngle <= -90 && cabViewAngle >= -270) ? CabViewType.Rear : CabViewType.Front;
+
+                // only one cabview, and it looks rear; insert a void one at first place to maintain fast indexing
+                if (CabViewpoints.Count == 1 && cabViewType == CabViewType.Rear)
+                    CabViewpoints.Insert(0, new PassengerViewPoint());
+
+                return new CabView3D(cvfFile, CabViewpoints, extendedCVF, cabViewType, noseAhead, shapeFilePath);
             }
-            var cvfFile = new CabViewFile(cvfFilePath, cvfBasePath);
-            if (!(this is MSTSSteamLocomotive))
-                InitializeFromORTSSpecific(cvfFilePath, extendedCVF);
-
-            var cabViewAngle = CabViewpoints[0].StartDirection.Y;
-            var cabViewType = (cabViewAngle >= 90 && cabViewAngle <= 270) || (cabViewAngle <= -90 && cabViewAngle >= -270) ? CabViewType.Rear : CabViewType.Front;
-
-            // only one cabview, and it looks rear; insert a void one at first place to maintain fast indexing
-            if (CabViewpoints.Count == 1 && cabViewType == CabViewType.Rear)
-                CabViewpoints.Insert(0, new PassengerViewPoint());
-
-            return new CabView3D(cvfFile, CabViewpoints, extendedCVF, cabViewType, noseAhead, shapeFilePath);
+            catch (Exception ex)
+            {
+                Trace.TraceWarning("Failed to build 3D CabView for {0}: {1}", WagFilePath, ex.Message);
+                return null;
+            }
         }
 
         /// <summary>
@@ -1646,7 +1662,14 @@ namespace Orts.Simulation.RollingStocks
                 }
             }
             LocomotivePowerSupply?.Initialize();
-            TrainControlSystem.Initialize();
+            try
+            {
+                TrainControlSystem.Initialize();
+            }
+            catch (Exception ex)
+            {
+                Trace.TraceWarning("Failed to initialize TCS on {0}: {1}", WagFilePath, ex.Message);
+            }
             CruiseControl?.Initialize();
             foreach (MultiPositionController mpc in MultiPositionControllers)
             {

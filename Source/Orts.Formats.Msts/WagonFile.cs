@@ -1,4 +1,4 @@
-﻿// COPYRIGHT 2013, 2015 by the Open Rails project.
+// COPYRIGHT 2013, 2015 by the Open Rails project.
 // 
 // This file is part of Open Rails.
 // 
@@ -16,6 +16,7 @@
 // along with Open Rails.  If not, see <http://www.gnu.org/licenses/>.
 
 using System;
+using System.Diagnostics;
 using System.IO;
 using Orts.Common;
 using Orts.Parsers.Msts;
@@ -108,29 +109,36 @@ namespace Orts.Formats.Msts
 
         public WagonFile(string filePath)
         {
-            filePath = ORFileHelper.FindORTSFile(filePath);
-
-            Name = Path.GetFileNameWithoutExtension(filePath);
-
-            using (var stf = new STFReader(filePath, false))
+            try
             {
-                stf.ParseFile(new STFReader.TokenProcessor[] {
-                    new STFReader.TokenProcessor("wagon", ()=>{
-                        stf.ReadString();
-                        stf.ParseBlock(new STFReader.TokenProcessor[] {
-                            new STFReader.TokenProcessor("name", ()=>{ Name = stf.ReadStringBlock(null); }),
-                            new STFReader.TokenProcessor("type", ()=>{ WagonType = stf.ReadStringBlock(null); }),
-                            new STFReader.TokenProcessor("mass", ()=>{ MassKG = stf.ReadFloatBlock(STFReader.UNITS.Mass, null); }),
-                            new STFReader.TokenProcessor("size", ()=>{ WagonSize = new CarSize( stf); }),
-                            new STFReader.TokenProcessor("ortsnumberaxles", ()=>{ NumWagAxles = stf.ReadIntBlock(null); }),
-                            new STFReader.TokenProcessor("numwheels", ()=>{ NumWagWheels = stf.ReadFloatBlock( STFReader.UNITS.None, null); }),
-                            new STFReader.TokenProcessor("brakesystemtype", ()=>{ BrakeSystemType = stf.ReadStringBlock(null).ToLower(); }),
-                            new STFReader.TokenProcessor("brakeequipmenttype", ()=>{ BrakeEquipmentType = stf.ReadStringBlock(null).ToLower(); }),
-                            new STFReader.TokenProcessor("maxbrakeforce", ()=>{ MaxBrakeForceN = stf.ReadFloatBlock(STFReader.UNITS.Force, null); }),
-                            new STFReader.TokenProcessor("coupling", ()=>{ new CouplingSpring( ref MinCouplerStrengthN, stf); })
-                        });
-                    }),
-                });
+                filePath = ORFileHelper.FindORTSFile(filePath);
+
+                Name = Path.GetFileNameWithoutExtension(filePath);
+
+                using (var stf = new STFReader(filePath, false))
+                {
+                    stf.ParseFile(new STFReader.TokenProcessor[] {
+                        new STFReader.TokenProcessor("wagon", ()=>{
+                            stf.ReadString();
+                            stf.ParseBlock(new STFReader.TokenProcessor[] {
+                                new STFReader.TokenProcessor("name", ()=>{ Name = stf.ReadStringBlock(null); }),
+                                new STFReader.TokenProcessor("type", ()=>{ WagonType = stf.ReadStringBlock(null); }),
+                                new STFReader.TokenProcessor("mass", ()=>{ MassKG = stf.ReadFloatBlock(STFReader.UNITS.Mass, null); }),
+                                new STFReader.TokenProcessor("size", ()=>{ WagonSize = new CarSize( stf); }),
+                                new STFReader.TokenProcessor("ortsnumberaxles", ()=>{ NumWagAxles = stf.ReadIntBlock(null); }),
+                                new STFReader.TokenProcessor("numwheels", ()=>{ NumWagWheels = stf.ReadFloatBlock( STFReader.UNITS.None, null); }),
+                                new STFReader.TokenProcessor("brakesystemtype", ()=>{ BrakeSystemType = stf.ReadStringBlock(null).ToLower(); }),
+                                new STFReader.TokenProcessor("brakeequipmenttype", ()=>{ BrakeEquipmentType = stf.ReadStringBlock(null).ToLower(); }),
+                                new STFReader.TokenProcessor("maxbrakeforce", ()=>{ MaxBrakeForceN = stf.ReadFloatBlock(STFReader.UNITS.Force, null); }),
+                                new STFReader.TokenProcessor("coupling", ()=>{ new CouplingSpring( ref MinCouplerStrengthN, stf); })
+                            });
+                        }),
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                Trace.TraceWarning("WagonFile: Failed to parse WAG file {0}: {1}", filePath, ex.Message);
             }
         }
 

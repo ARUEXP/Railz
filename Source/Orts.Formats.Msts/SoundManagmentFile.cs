@@ -1,4 +1,4 @@
-﻿// COPYRIGHT 2009, 2010, 2011, 2012, 2013 by the Open Rails project.
+// COPYRIGHT 2009, 2010, 2011, 2012, 2013 by the Open Rails project.
 // 
 // This file is part of Open Rails.
 // 
@@ -15,7 +15,9 @@
 // You should have received a copy of the GNU General Public License
 // along with Open Rails.  If not, see <http://www.gnu.org/licenses/>.
 
+using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using Orts.Parsers.Msts;
 
 namespace Orts.Formats.Msts
@@ -56,7 +58,7 @@ namespace Orts.Formats.Msts
 	/// </summary>
 	public class SoundManagmentFile
 	{
-		public Tr_SMS Tr_SMS;
+		public Tr_SMS Tr_SMS = new Tr_SMS();
 
 		public SoundManagmentFile( string filePath )
 		{
@@ -65,10 +67,17 @@ namespace Orts.Formats.Msts
 
         private void ReadFile(string filePath)
         {
-            using (STFReader stf = new STFReader(filePath, false))
-                stf.ParseFile(new STFReader.TokenProcessor[] {
-                    new STFReader.TokenProcessor("tr_sms", ()=>{ Tr_SMS = new Tr_SMS(stf); }),
-                });
+            try
+            {
+                using (STFReader stf = new STFReader(filePath, false))
+                    stf.ParseFile(new STFReader.TokenProcessor[] {
+                        new STFReader.TokenProcessor("tr_sms", ()=>{ Tr_SMS = new Tr_SMS(stf); }),
+                    });
+            }
+            catch (Exception ex)
+            {
+                Trace.TraceWarning("SoundManagmentFile: Failed to parse SMS file {0}: {1}", filePath, ex.Message);
+            }
         }
     } // class SMSFile
 
@@ -76,6 +85,10 @@ namespace Orts.Formats.Msts
     {
         public List<ScalabiltyGroup> ScalabiltyGroups = new List<ScalabiltyGroup>();
         
+        public Tr_SMS()
+        {
+        }
+
         public Tr_SMS(STFReader stf)
         {
             stf.MustMatch("(");

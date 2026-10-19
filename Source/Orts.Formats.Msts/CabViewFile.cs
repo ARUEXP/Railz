@@ -1,4 +1,4 @@
-﻿// COPYRIGHT 2009, 2010, 2011, 2012, 2013 by the Open Rails project.
+// COPYRIGHT 2009, 2010, 2011, 2012, 2013 by the Open Rails project.
 // 
 // This file is part of Open Rails.
 // 
@@ -38,35 +38,42 @@ namespace Orts.Formats.Msts
 
         public CabViewFile(string filePath, string basePath)
         {
-            using (STFReader stf = new STFReader(filePath, false))
-                stf.ParseFile(new STFReader.TokenProcessor[] {
-                    new STFReader.TokenProcessor("tr_cabviewfile", ()=>{ stf.MustMatch("("); stf.ParseBlock(new STFReader.TokenProcessor[] {
-                        new STFReader.TokenProcessor("position", ()=>{ Locations.Add(stf.ReadVector3Block(STFReader.UNITS.None, new Vector3())); }),
-                        new STFReader.TokenProcessor("direction", ()=>{ Directions.Add(stf.ReadVector3Block(STFReader.UNITS.None, new Vector3())); }),
-                        new STFReader.TokenProcessor("cabviewfile", ()=>{
-                            var fileName = stf.ReadStringBlock(null);
-                            var path = Path.Combine(basePath, Path.GetDirectoryName(fileName));
-                            var name = Path.GetFileName(fileName);
+            try
+            {
+                using (STFReader stf = new STFReader(filePath, false))
+                    stf.ParseFile(new STFReader.TokenProcessor[] {
+                        new STFReader.TokenProcessor("tr_cabviewfile", ()=>{ stf.MustMatch("("); stf.ParseBlock(new STFReader.TokenProcessor[] {
+                            new STFReader.TokenProcessor("position", ()=>{ Locations.Add(stf.ReadVector3Block(STFReader.UNITS.None, new Vector3())); }),
+                            new STFReader.TokenProcessor("direction", ()=>{ Directions.Add(stf.ReadVector3Block(STFReader.UNITS.None, new Vector3())); }),
+                            new STFReader.TokenProcessor("cabviewfile", ()=>{
+                                var fileName = stf.ReadStringBlock(null);
+                                var path = Path.Combine(basePath, Path.GetDirectoryName(fileName));
+                                var name = Path.GetFileName(fileName);
 
-                            // Use *Frnt1024.ace if available
-                            string s = name;
-                            string[] nameParts = s.Split('.');
-                            string name1024 = nameParts[0] + "1024." + nameParts[1];
-                            var tstFileName1024 = Path.Combine(path, name1024);
-                            if (File.Exists(tstFileName1024))
-                                name = name1024;
+                                // Use *Frnt1024.ace if available
+                                string s = name;
+                                string[] nameParts = s.Split('.');
+                                string name1024 = nameParts[0] + "1024." + nameParts[1];
+                                var tstFileName1024 = Path.Combine(path, name1024);
+                                if (File.Exists(tstFileName1024))
+                                    name = name1024;
 
-                            TwoDViews.Add(Path.Combine(path, name));
-                            NightViews.Add(Path.Combine(path, Path.Combine("NIGHT", name)));
-                            LightViews.Add(Path.Combine(path, Path.Combine("CABLIGHT", name)));
-                        }),
-                        new STFReader.TokenProcessor("cabviewcontrols", ()=>{ CabViewControls = new CabViewControls(stf, basePath); }),
-                        new STFReader.TokenProcessor("ortscabviewcontrols", ()=>{ 
-                            if (CabViewControls == null) CabViewControls = new CabViewControls(stf, basePath);
-                            else CabViewControls.AddCabviewControls(stf, basePath);
-                        }),
-                    });}),
-                });
+                                TwoDViews.Add(Path.Combine(path, name));
+                                NightViews.Add(Path.Combine(path, Path.Combine("NIGHT", name)));
+                                LightViews.Add(Path.Combine(path, Path.Combine("CABLIGHT", name)));
+                            }),
+                            new STFReader.TokenProcessor("cabviewcontrols", ()=>{ CabViewControls = new CabViewControls(stf, basePath); }),
+                            new STFReader.TokenProcessor("ortscabviewcontrols", ()=>{ 
+                                if (CabViewControls == null) CabViewControls = new CabViewControls(stf, basePath);
+                                else CabViewControls.AddCabviewControls(stf, basePath);
+                            }),
+                        });}),
+                    });
+            }
+            catch (Exception ex)
+            {
+                Trace.TraceWarning("CabViewFile: Failed to parse CVF file {0}: {1}", filePath, ex.Message);
+            }
 		}
 
 	} // class CVFFile

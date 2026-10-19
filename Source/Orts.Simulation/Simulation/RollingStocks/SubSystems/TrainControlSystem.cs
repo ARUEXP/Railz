@@ -1,4 +1,4 @@
-﻿// COPYRIGHT 2021 by the Open Rails project.
+// COPYRIGHT 2021 by the Open Rails project.
 // 
 // This file is part of Open Rails.
 // 
@@ -228,9 +228,18 @@ namespace Orts.Simulation.RollingStocks.SubSystems
             {
                 if (!Simulator.Settings.DisableTCSScripts && ScriptName != null && ScriptName != "MSTS" && ScriptName != "")
                 {
-                    var pathArray = new string[] { Path.Combine(Path.GetDirectoryName(Locomotive.WagFilePath), "Script") };
-                    Script = Simulator.ScriptManager.Load(pathArray, ScriptName) as TrainControlSystem;
-                    CustomTCSScript = true;
+                    try
+                    {
+                        var pathArray = new string[] { Path.Combine(Path.GetDirectoryName(Locomotive.WagFilePath), "Script") };
+                        Script = Simulator.ScriptManager.Load(pathArray, ScriptName) as TrainControlSystem;
+                        CustomTCSScript = Script != null;
+                    }
+                    catch (Exception ex)
+                    {
+                        Trace.TraceWarning("Failed to load scripted TCS '{0}' for {1}: {2}. Falling back to standard MSTS TCS.", ScriptName, Locomotive.WagFilePath, ex.Message);
+                        Script = null;
+                        CustomTCSScript = false;
+                    }
                 }
 
                 if (ParametersFileName != null)

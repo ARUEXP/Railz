@@ -121,14 +121,17 @@ namespace Orts.Viewer3D.Processes
 
         internal override void Dispose()
         {
-            Loading.Dispose();
-            LoadingScreen.Dispose();
-            LoadingBar.Dispose();
-            TimetableLoadingBar.Dispose();
+            Loading?.Dispose();
+            LoadingScreen?.Dispose();
+            LoadingBar?.Dispose();
+            TimetableLoadingBar?.Dispose();
             LoadingText?.Dispose();
-            foreach (var retired in LoadingTextRetired)
-                retired.Dispose();
-            LoadingTextRetired.Clear();
+            if (LoadingTextRetired != null)
+            {
+                foreach (var retired in LoadingTextRetired)
+                    retired?.Dispose();
+                LoadingTextRetired.Clear();
+            }
             base.Dispose();
         }
 

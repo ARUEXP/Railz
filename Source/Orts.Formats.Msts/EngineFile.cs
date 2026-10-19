@@ -1,4 +1,4 @@
-﻿// COPYRIGHT 2013 by the Open Rails project.
+// COPYRIGHT 2013 by the Open Rails project.
 // 
 // This file is part of Open Rails.
 // 
@@ -15,6 +15,8 @@
 // You should have received a copy of the GNU General Public License
 // along with Open Rails.  If not, see <http://www.gnu.org/licenses/>.
 
+using System;
+using System.Diagnostics;
 using System.IO;
 using Microsoft.Xna.Framework;
 using Orts.Common;
@@ -42,31 +44,38 @@ namespace Orts.Formats.Msts
 
         public EngineFile(string filePath)
         {
-            filePath = ORFileHelper.FindORTSFile(filePath);
-
-            Name = Path.GetFileNameWithoutExtension(filePath);
-
-            using (var stf = new STFReader(filePath, false))
+            try
             {
-                stf.ParseFile(new STFReader.TokenProcessor[] {
-                    new STFReader.TokenProcessor("engine", ()=>{
-                        stf.ReadString();
-                        stf.ParseBlock(new STFReader.TokenProcessor[] {
-                            new STFReader.TokenProcessor("name", ()=>{ Name = stf.ReadStringBlock(null); }),
-                            new STFReader.TokenProcessor("type", ()=>{ EngineType = stf.ReadStringBlock(null); }),
-                            new STFReader.TokenProcessor("maxpower", ()=>{ MaxPowerW = stf.ReadFloatBlock( STFReader.UNITS.Power, null); }),
-                            new STFReader.TokenProcessor("ortsdieseltransmissionefficiency", ()=>{ TransmissionEfficiency = MathHelper.Clamp(stf.ReadFloatBlock(STFReader.UNITS.None, null), 0.001f, 1.0f); }),
-                            new STFReader.TokenProcessor("maxforce", ()=>{ MaxForceN = stf.ReadFloatBlock( STFReader.UNITS.Force, null); }),
-                            new STFReader.TokenProcessor("maxcontinuousforce", ()=>{ MaxContinuousForceN = stf.ReadFloatBlock( STFReader.UNITS.Force, null); }),
-                            new STFReader.TokenProcessor("dynamicbrakesmaximumforce", ()=>{ MaxDynamicBrakeForceN = stf.ReadFloatBlock( STFReader.UNITS.Force, null); }),
-                            new STFReader.TokenProcessor("maxvelocity", ()=>{ MaxSpeedMps = stf.ReadFloatBlock( STFReader.UNITS.Speed, null); }),
-                            new STFReader.TokenProcessor("ortsnumberdriveaxles", ()=>{ NumDriveAxles = stf.ReadIntBlock(null); }),
-                            new STFReader.TokenProcessor("numwheels", ()=>{ NumEngWheels = stf.ReadFloatBlock( STFReader.UNITS.None, null); }),
-                            new STFReader.TokenProcessor("description", ()=>{ Description = stf.ReadStringBlock(null); }),
-                            new STFReader.TokenProcessor("cabview", ()=>{ CabViewFile = stf.ReadStringBlock(null); }),
-                        });
-                    }),
-                });
+                filePath = ORFileHelper.FindORTSFile(filePath);
+
+                Name = Path.GetFileNameWithoutExtension(filePath);
+
+                using (var stf = new STFReader(filePath, false))
+                {
+                    stf.ParseFile(new STFReader.TokenProcessor[] {
+                        new STFReader.TokenProcessor("engine", ()=>{
+                            stf.ReadString();
+                            stf.ParseBlock(new STFReader.TokenProcessor[] {
+                                new STFReader.TokenProcessor("name", ()=>{ Name = stf.ReadStringBlock(null); }),
+                                new STFReader.TokenProcessor("type", ()=>{ EngineType = stf.ReadStringBlock(null); }),
+                                new STFReader.TokenProcessor("maxpower", ()=>{ MaxPowerW = stf.ReadFloatBlock( STFReader.UNITS.Power, null); }),
+                                new STFReader.TokenProcessor("ortsdieseltransmissionefficiency", ()=>{ TransmissionEfficiency = MathHelper.Clamp(stf.ReadFloatBlock(STFReader.UNITS.None, null), 0.001f, 1.0f); }),
+                                new STFReader.TokenProcessor("maxforce", ()=>{ MaxForceN = stf.ReadFloatBlock( STFReader.UNITS.Force, null); }),
+                                new STFReader.TokenProcessor("maxcontinuousforce", ()=>{ MaxContinuousForceN = stf.ReadFloatBlock( STFReader.UNITS.Force, null); }),
+                                new STFReader.TokenProcessor("dynamicbrakesmaximumforce", ()=>{ MaxDynamicBrakeForceN = stf.ReadFloatBlock( STFReader.UNITS.Force, null); }),
+                                new STFReader.TokenProcessor("maxvelocity", ()=>{ MaxSpeedMps = stf.ReadFloatBlock( STFReader.UNITS.Speed, null); }),
+                                new STFReader.TokenProcessor("ortsnumberdriveaxles", ()=>{ NumDriveAxles = stf.ReadIntBlock(null); }),
+                                new STFReader.TokenProcessor("numwheels", ()=>{ NumEngWheels = stf.ReadFloatBlock( STFReader.UNITS.None, null); }),
+                                new STFReader.TokenProcessor("description", ()=>{ Description = stf.ReadStringBlock(null); }),
+                                new STFReader.TokenProcessor("cabview", ()=>{ CabViewFile = stf.ReadStringBlock(null); }),
+                            });
+                        }),
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                Trace.TraceWarning("EngineFile: Failed to parse ENG file {0}: {1}", filePath, ex.Message);
             }
         }
 

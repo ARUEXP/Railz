@@ -1374,9 +1374,7 @@ namespace Orts.Simulation
                 }
                 catch (Exception error)
                 {
-                    // First wagon is the player's loco and required, so issue a fatal error message
-                    if (wagon == conFile.Train.TrainCfg.WagonList[0])
-                        throw new FileLoadException(wagonFilePath, error);
+                    Trace.TraceWarning("Simulator.InitializePlayerTrain: Failed loading car {0}: {1}", wagonFilePath, error);
                     Trace.WriteLine(new FileLoadException(wagonFilePath, error));
                 }
             }// for each rail car

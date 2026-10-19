@@ -78,9 +78,17 @@ namespace Orts.Common.Scripting
 
             var type = String.Format("{0}.{1}", nameSpace, Path.GetFileNameWithoutExtension(path).Replace('-', '_'));
 
-            if (!Scripts.ContainsKey(path))
-                Scripts[path] = CompileScript(new string[] { path });
-            return Scripts[path]?.CreateInstance(type, true);
+            try
+            {
+                if (!Scripts.ContainsKey(path))
+                    Scripts[path] = CompileScript(new string[] { path });
+                return Scripts[path]?.CreateInstance(type, true);
+            }
+            catch (Exception ex)
+            {
+                Trace.TraceWarning("Failed to compile or instantiate script {0}: {1}", path, ex.Message);
+                return null;
+            }
         }
 
         private static Assembly CompileScript(string[] path)

@@ -1,4 +1,4 @@
-﻿// COPYRIGHT 2013 by the Open Rails project.
+// COPYRIGHT 2013 by the Open Rails project.
 // 
 // This file is part of Open Rails.
 // 
@@ -59,6 +59,18 @@ namespace Orts
             string path = Path.Combine(ApplicationInfo.ProcessDirectory, "Native");
             path = Path.Combine(path, (Environment.Is64BitProcess) ? "X64" : "X86");
             NativeMethods.SetDllDirectory(path);
+
+            NativeLibrary.SetDllImportResolver(typeof(OpenAL).Assembly, (libraryName, assembly, searchPath) =>
+            {
+                if (libraryName.Equals("OpenAL32.dll", StringComparison.OrdinalIgnoreCase) || libraryName.Equals("OpenAL32", StringComparison.OrdinalIgnoreCase))
+                {
+                    string arch = Environment.Is64BitProcess ? "X64" : "X86";
+                    string candidate = Path.Combine(ApplicationInfo.ProcessDirectory, "Native", arch, "OpenAL32.dll");
+                    if (File.Exists(candidate))
+                        return NativeLibrary.Load(candidate);
+                }
+                return IntPtr.Zero;
+            });
 
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);

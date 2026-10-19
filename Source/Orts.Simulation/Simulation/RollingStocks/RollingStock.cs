@@ -1,4 +1,4 @@
-﻿// COPYRIGHT 2009, 2010, 2012, 2013 by the Open Rails project.
+// COPYRIGHT 2009, 2010, 2012, 2013 by the Open Rails project.
 // 
 // This file is part of Open Rails.
 // 
@@ -112,7 +112,14 @@ namespace Orts.Simulation.RollingStocks
 
                 if (initialize)
                 {
-                    wagon.Initialize();
+                    try
+                    {
+                        wagon.Initialize();
+                    }
+                    catch (Exception ex)
+                    {
+                        Trace.TraceWarning("RollingStock.Load: Failed to initialize car {0}: {1}", wagFilePath, ex.Message);
+                    }
                 }
             }
 

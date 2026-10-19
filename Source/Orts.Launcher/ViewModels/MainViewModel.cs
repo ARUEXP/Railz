@@ -437,6 +437,7 @@ namespace Orts.Launcher.ViewModels
 
             var consistPath = LastSelection(UserSettings.Menu_SelectionIndex.Consist);
             SelectedConsist = Consists.FirstOrDefault(c => string.Equals(c.FilePath, consistPath, StringComparison.OrdinalIgnoreCase))
+                ?? Consists.FirstOrDefault(c => c.FilePath.IndexOf("Class 47", StringComparison.OrdinalIgnoreCase) >= 0)
                 ?? Consists.FirstOrDefault();
 
             var pathPath = LastSelection(UserSettings.Menu_SelectionIndex.Path);

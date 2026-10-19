@@ -29,8 +29,9 @@ using ORTS.Common;
 namespace Orts.Viewer3D.Popups
 {
     /// <summary>
-    /// Bottom-centre driving deck: a throttle bar and a train-brake bar you can drag, the F/N/R
-    /// reverser selector and the arcade pill, all driving the player locomotive's own controllers.
+    /// Bottom-centre driving deck: interactive throttle & brake sliders, quick-action buttons
+    /// (0% idle, 100% full, quick brake release, emergency brake), F/N/R direction buttons,
+    /// and arcade/real physics toggle, all synchronized with the locomotive's controllers.
     /// </summary>
     /// <remarks>
     /// <para>
@@ -39,12 +40,11 @@ namespace Orts.Viewer3D.Popups
     /// Updater thread runs immediately before <c>Simulator.Update</c> on the same thread, so the
     /// deck never touches the simulation from a different thread than the simulation itself.
     /// </para>
-    /// <para>Press <c>U</c> to hide the deck for a clean screen.</para>
+    /// <para>Press <c>U</c> or click the deck close button to hide/show the controls for a clean screen.</para>
     /// </remarks>
     sealed class DrivingControls
     {
         static readonly string[] ReverserLabels = { "F", "N", "R" };
-        // Below this the bar is not worth another controller command while dragging.
         const float DragResolution = 0.02f;
 
         readonly WindowManager Owner;
@@ -67,8 +67,10 @@ namespace Orts.Viewer3D.Popups
         // Row geometry in pixels; rebuilt only when the display size changes.
         Point LayoutSize = new Point(-1, -1);
         Rectangle Deck;
-        Rectangle ThrottleLabel, ThrottleTrack, ThrottleValueArea;
-        Rectangle BrakeLabel, BrakeTrack, BrakeValueArea;
+        Rectangle MiniTogglePill;
+        Rectangle CloseBtn;
+        Rectangle ThrottleLabel, ThrottleZeroBtn, ThrottleTrack, ThrottleFullBtn, ThrottleValueArea;
+        Rectangle BrakeLabel, BrakeRelBtn, BrakeTrack, BrakeEmgBtn, BrakeValueArea;
         readonly Rectangle[] ReverserSegments = new Rectangle[ReverserLabels.Length];
         Rectangle ReverserCaptionArea;
         Rectangle ModePill, ModeCaptionArea;
@@ -96,16 +98,21 @@ namespace Orts.Viewer3D.Popups
             ModeCaption = Viewer.Catalog.GetString("MODE");
         }
 
-        /// <summary>Handles the toggle key and the pointer, and refreshes the displayed values.</summary>
+        /// <summary>Handles pointer interactions, hotkeys, and controller synchronisation.</summary>
         public void Prepare(bool updateFull)
         {
-            if (!UserInput.ComposingMessage && KeyPressed(Keys.U))
-                Visible = !Visible;
-            if (!Visible)
-                return;
-
             if (Owner.ScreenSize != LayoutSize)
                 Layout();
+
+            if (!UserInput.ComposingMessage && KeyPressed(Keys.U))
+                Visible = !Visible;
+
+            if (!Visible)
+            {
+                if (UserInput.IsMouseLeftButtonPressed && MiniTogglePill.Contains(UserInput.MouseX, UserInput.MouseY))
+                    Visible = true;
+                return;
+            }
 
             var locomotive = Viewer.PlayerLocomotive as MSTSLocomotive;
             if (locomotive == null)
@@ -133,41 +140,79 @@ namespace Orts.Viewer3D.Popups
 
         public void Draw(SpriteBatch spriteBatch)
         {
-            if (!Visible || ThrottleText == null)
-                return;
-
             var white = WindowManager.WhiteTexture;
 
-            spriteBatch.Draw(white, Deck, ModernDrivingHUD.PanelColor);
-            spriteBatch.Draw(white, new Rectangle(Deck.X, Deck.Y, Deck.Width, 1), ModernDrivingHUD.BorderColor);
-            spriteBatch.Draw(white, new Rectangle(Deck.X, Deck.Bottom - 1, Deck.Width, 1), ModernDrivingHUD.BorderColor);
-            spriteBatch.Draw(white, new Rectangle(Deck.X, Deck.Y, 1, Deck.Height), ModernDrivingHUD.BorderColor);
-            spriteBatch.Draw(white, new Rectangle(Deck.Right - 1, Deck.Y, 1, Deck.Height), ModernDrivingHUD.BorderColor);
+            if (!Visible)
+            {
+                // Subtle bottom-centre toggle pill when deck is hidden
+                spriteBatch.Draw(white, MiniTogglePill, ModernDrivingHUD.PanelColor);
+                DrawBorder(spriteBatch, white, MiniTogglePill);
+                LabelFont.Draw(spriteBatch, MiniTogglePill, Point.Zero, "▲ CONTROLS (U)", LabelAlignment.Center, ModernDrivingHUD.TextColor, Scratch);
+                return;
+            }
 
+            if (ThrottleText == null)
+                return;
+
+            // Translucent deck container
+            spriteBatch.Draw(white, Deck, ModernDrivingHUD.PanelColor);
+            DrawBorder(spriteBatch, white, Deck);
+
+            // Captions
             LabelFont.Draw(spriteBatch, ThrottleLabel, Point.Zero, ThrottleCaption, LabelAlignment.Left, ModernDrivingHUD.MutedColor, Scratch);
             LabelFont.Draw(spriteBatch, BrakeLabel, Point.Zero, BrakeCaption, LabelAlignment.Left, ModernDrivingHUD.MutedColor, Scratch);
             LabelFont.Draw(spriteBatch, ReverserCaptionArea, Point.Zero, ReverserCaption, LabelAlignment.Left, ModernDrivingHUD.MutedColor, Scratch);
             LabelFont.Draw(spriteBatch, ModeCaptionArea, Point.Zero, ModeCaption, LabelAlignment.Left, ModernDrivingHUD.MutedColor, Scratch);
 
-            DrawBar(spriteBatch, white, ThrottleTrack, ThrottleValueArea, Throttle, ThrottleText, ModernDrivingHUD.AccentColor);
-            DrawBar(spriteBatch, white, BrakeTrack, BrakeValueArea, Brake, BrakeText, ModernDrivingHUD.TrainBrakeColor);
+            // Close button [ ✕ ]
+            DrawButton(spriteBatch, white, CloseBtn, "✕", ModernDrivingHUD.MutedColor, ModernDrivingHUD.TrackColor);
 
+            // Throttle: [ 0% ] [==== Slider ====] [ 100% ] [ Value% ]
+            DrawButton(spriteBatch, white, ThrottleZeroBtn, "0%", ModernDrivingHUD.MutedColor, ModernDrivingHUD.TrackColor);
+            DrawBar(spriteBatch, white, ThrottleTrack, ThrottleValueArea, Throttle, ThrottleText, ModernDrivingHUD.AccentColor);
+            DrawButton(spriteBatch, white, ThrottleFullBtn, "100%", ModernDrivingHUD.MutedColor, ModernDrivingHUD.TrackColor);
+
+            // Brake: [ REL ] [==== Slider ====] [ EMG ] [ Value% ]
+            DrawButton(spriteBatch, white, BrakeRelBtn, "REL", ModernDrivingHUD.TextColor, ModernDrivingHUD.TrackColor);
+            DrawBar(spriteBatch, white, BrakeTrack, BrakeValueArea, Brake, BrakeText, ModernDrivingHUD.TrainBrakeColor);
+            DrawButton(spriteBatch, white, BrakeEmgBtn, "EMG", ModernDrivingHUD.TrainBrakeColor, ModernDrivingHUD.TrackColor);
+
+            // Reverser F / N / R
             for (var i = 0; i < ReverserSegments.Length; i++)
             {
                 var active = i == ReverserIndex;
                 spriteBatch.Draw(white, ReverserSegments[i], active ? ModernDrivingHUD.AccentColor : ModernDrivingHUD.TrackColor);
+                DrawBorder(spriteBatch, white, ReverserSegments[i]);
                 ValueFont.Draw(spriteBatch, ReverserSegments[i], Point.Zero, ReverserLabels[i], LabelAlignment.Center,
                     active ? ModernDrivingHUD.TextColor : ReverserLocked ? ModernDrivingHUD.DynamicColor : ModernDrivingHUD.MutedColor, Scratch);
             }
 
+            // Arcade / Pure Physics Mode
             spriteBatch.Draw(white, ModePill, Arcade ? ModernDrivingHUD.AccentColor : ModernDrivingHUD.TrackColor);
+            DrawBorder(spriteBatch, white, ModePill);
             ValueFont.Draw(spriteBatch, ModePill, Point.Zero, ModeText, LabelAlignment.Center,
                 Arcade ? ModernDrivingHUD.TextColor : ModernDrivingHUD.MutedColor, Scratch);
+        }
+
+        static void DrawBorder(SpriteBatch spriteBatch, Texture2D white, Rectangle rect)
+        {
+            spriteBatch.Draw(white, new Rectangle(rect.X, rect.Y, rect.Width, 1), ModernDrivingHUD.BorderColor);
+            spriteBatch.Draw(white, new Rectangle(rect.X, rect.Bottom - 1, rect.Width, 1), ModernDrivingHUD.BorderColor);
+            spriteBatch.Draw(white, new Rectangle(rect.X, rect.Y, 1, rect.Height), ModernDrivingHUD.BorderColor);
+            spriteBatch.Draw(white, new Rectangle(rect.Right - 1, rect.Y, 1, rect.Height), ModernDrivingHUD.BorderColor);
+        }
+
+        void DrawButton(SpriteBatch spriteBatch, Texture2D white, Rectangle rect, string text, Color textColor, Color bgColor)
+        {
+            spriteBatch.Draw(white, rect, bgColor);
+            DrawBorder(spriteBatch, white, rect);
+            ValueFont.Draw(spriteBatch, rect, Point.Zero, text, LabelAlignment.Center, textColor, Scratch);
         }
 
         void DrawBar(SpriteBatch spriteBatch, Texture2D white, Rectangle track, Rectangle valueArea, float fraction, string text, Color fill)
         {
             spriteBatch.Draw(white, track, ModernDrivingHUD.TrackColor);
+            DrawBorder(spriteBatch, white, track);
             var filled = (int)(track.Width * fraction);
             if (filled > 0)
                 spriteBatch.Draw(white, new Rectangle(track.X, track.Y, filled, track.Height), fill);
@@ -181,20 +226,45 @@ namespace Orts.Viewer3D.Popups
 
             if (UserInput.IsMouseLeftButtonPressed)
             {
-                if (ThrottleTrack.Contains(x, y))
+                if (CloseBtn.Contains(x, y))
+                {
+                    Visible = false;
+                    return;
+                }
+
+                if (ThrottleZeroBtn.Contains(x, y))
+                {
+                    ForceCommandThrottle(locomotive, 0f, ref CommandedThrottle);
+                }
+                else if (ThrottleFullBtn.Contains(x, y))
+                {
+                    ForceCommandThrottle(locomotive, 1f, ref CommandedThrottle);
+                }
+                else if (ThrottleTrack.Contains(x, y))
                 {
                     DraggingThrottle = true;
                     CommandedThrottle = -1;
                     CommandThrottle(locomotive, Fraction(ThrottleTrack, x), ref CommandedThrottle);
                 }
-                if (BrakeTrack.Contains(x, y))
+
+                if (BrakeRelBtn.Contains(x, y))
+                {
+                    ForceCommandBrake(locomotive, 0f, ref CommandedBrake);
+                }
+                else if (BrakeEmgBtn.Contains(x, y))
+                {
+                    ForceCommandBrake(locomotive, 1f, ref CommandedBrake);
+                }
+                else if (BrakeTrack.Contains(x, y))
                 {
                     DraggingBrake = true;
                     CommandedBrake = -1;
                     CommandBrake(locomotive, Fraction(BrakeTrack, x), ref CommandedBrake);
                 }
+
                 if (ModePill.Contains(x, y))
                     ToggleArcade();
+
                 for (var i = 0; i < ReverserSegments.Length; i++)
                     if (ReverserSegments[i].Contains(x, y))
                     {
@@ -222,14 +292,18 @@ namespace Orts.Viewer3D.Popups
 
         static float Fraction(Rectangle track, int x) => MathHelper.Clamp((x - track.X) / (float)track.Width, 0, 1);
 
-        // SetValue moves the lever in one go, which is what dragging a slider means; the controller's
-        // own notch layout still decides where it finally lands.
         static void CommandThrottle(MSTSLocomotive locomotive, float value, ref float commanded)
         {
             if (Math.Abs(value - commanded) < DragResolution)
                 return;
             commanded = value;
-            locomotive.ThrottleController.SetValue(value, true);
+            locomotive.ThrottleController?.SetValue(value, true);
+        }
+
+        static void ForceCommandThrottle(MSTSLocomotive locomotive, float value, ref float commanded)
+        {
+            commanded = value;
+            locomotive.ThrottleController?.SetValue(value, true);
         }
 
         static void CommandBrake(MSTSLocomotive locomotive, float value, ref float commanded)
@@ -237,21 +311,23 @@ namespace Orts.Viewer3D.Popups
             if (Math.Abs(value - commanded) < DragResolution)
                 return;
             commanded = value;
-            locomotive.TrainBrakeController.SetValue(value);
+            locomotive.TrainBrakeController?.SetValue(value);
+        }
+
+        static void ForceCommandBrake(MSTSLocomotive locomotive, float value, ref float commanded)
+        {
+            commanded = value;
+            locomotive.TrainBrakeController?.SetValue(value);
         }
 
         void SetReverser(MSTSLocomotive locomotive, int index)
         {
-            // Same guard as the keyboard command: no reverser changes with the throttle on, the train
-            // moving or the dynamic brake applied. The deck reports it by tinting the selector amber.
             if (ReverserLocked)
             {
                 Viewer.Simulator.Confirmer.Warning(Viewer.Catalog.GetString("Close throttle, release the dynamic brake and stop before changing the reverser."));
                 return;
             }
 
-            // SetDirection takes effect inside the call, so the loop below always terminates - the
-            // guard only bounds it in case a locomotive refuses the change for another reason.
             var guard = 0;
             while (ReverserIndex != index && guard++ < ReverserLabels.Length)
             {
@@ -288,40 +364,70 @@ namespace Orts.Viewer3D.Popups
             var gap = h / 2;
             var pad = h / 2;
             var labelHeight = LabelFont.Height;
-            var labelWidth = h * 6;
-            var trackWidth = h * 10;
-            var valueWidth = h * 3;
-            var columnWidth = labelWidth + gap + trackWidth + gap + valueWidth;
-            var reverserWidth = h * 2;
+            var labelWidth = h * 5;
+            var quickBtnWidth = (int)(h * 2.2f);
+            var relBtnWidth = (int)(h * 2.5f);
+            var trackWidth = h * 7;
+            var valueWidth = (int)(h * 2.8f);
+            var reverserWidth = (int)(h * 1.8f);
             var reverserHeight = h + h / 2;
-            var trackHeight = Math.Max(6, h - 6);
-            var pillWidth = h * 9;
+            var trackHeight = Math.Max(6, h - 4);
+            var pillWidth = (int)(h * 8.5f);
+            var closeWidth = (int)(h * 1.8f);
             var margin = h * 3 / 2;
 
+            var throttleColWidth = quickBtnWidth + gap + trackWidth + gap + quickBtnWidth + gap + valueWidth;
+            var brakeColWidth = relBtnWidth + gap + trackWidth + gap + quickBtnWidth + gap + valueWidth;
+
             var height = pad * 2 + labelHeight + gap + reverserHeight;
-            var width = pad * 2 + columnWidth * 2 + gap + (reverserWidth + gap) * ReverserLabels.Length + gap + pillWidth;
+            var width = pad * 2 + throttleColWidth + gap * 2 + brakeColWidth + gap * 2 + (reverserWidth + gap) * ReverserLabels.Length + gap + pillWidth + gap + closeWidth;
 
             Deck = new Rectangle((Owner.ScreenSize.X - width) / 2, Math.Max(0, Owner.ScreenSize.Y - height - margin), width, height);
+
+            var miniW = (int)(h * 8);
+            MiniTogglePill = new Rectangle((Owner.ScreenSize.X - miniW) / 2, Owner.ScreenSize.Y - h - 14, miniW, h + 8);
 
             var captionY = Deck.Y + pad;
             var rowY = captionY + labelHeight + gap;
 
-            ThrottleLabel = new Rectangle(Deck.X + pad, captionY, labelWidth, labelHeight);
-            ThrottleTrack = new Rectangle(ThrottleLabel.Right + gap, rowY + (reverserHeight - trackHeight) / 2, trackWidth, trackHeight);
-            ThrottleValueArea = new Rectangle(ThrottleTrack.Right + gap, rowY + (reverserHeight - h) / 2, valueWidth, h);
+            // Throttle column
+            var currentX = Deck.X + pad;
+            ThrottleLabel = new Rectangle(currentX, captionY, throttleColWidth, labelHeight);
+            ThrottleZeroBtn = new Rectangle(currentX, rowY, quickBtnWidth, reverserHeight);
+            currentX += quickBtnWidth + gap;
+            ThrottleTrack = new Rectangle(currentX, rowY + (reverserHeight - trackHeight) / 2, trackWidth, trackHeight);
+            currentX += trackWidth + gap;
+            ThrottleFullBtn = new Rectangle(currentX, rowY, quickBtnWidth, reverserHeight);
+            currentX += quickBtnWidth + gap;
+            ThrottleValueArea = new Rectangle(currentX, rowY + (reverserHeight - h) / 2, valueWidth, h);
+            currentX += valueWidth + gap * 2;
 
-            BrakeLabel = new Rectangle(ThrottleValueArea.Right + gap, captionY, labelWidth, labelHeight);
-            BrakeTrack = new Rectangle(BrakeLabel.Right + gap, ThrottleTrack.Y, trackWidth, trackHeight);
-            BrakeValueArea = new Rectangle(BrakeTrack.Right + gap, ThrottleValueArea.Y, valueWidth, h);
+            // Brake column
+            BrakeLabel = new Rectangle(currentX, captionY, brakeColWidth, labelHeight);
+            BrakeRelBtn = new Rectangle(currentX, rowY, relBtnWidth, reverserHeight);
+            currentX += relBtnWidth + gap;
+            BrakeTrack = new Rectangle(currentX, rowY + (reverserHeight - trackHeight) / 2, trackWidth, trackHeight);
+            currentX += trackWidth + gap;
+            BrakeEmgBtn = new Rectangle(currentX, rowY, quickBtnWidth, reverserHeight);
+            currentX += quickBtnWidth + gap;
+            BrakeValueArea = new Rectangle(currentX, rowY + (reverserHeight - h) / 2, valueWidth, h);
+            currentX += valueWidth + gap * 2;
 
-            var reverserX = BrakeValueArea.Right + gap;
+            // Direction column
+            ReverserCaptionArea = new Rectangle(currentX, captionY, (reverserWidth + gap) * ReverserLabels.Length, labelHeight);
             for (var i = 0; i < ReverserSegments.Length; i++)
-                ReverserSegments[i] = new Rectangle(reverserX + i * (reverserWidth + gap), rowY, reverserWidth, reverserHeight);
+            {
+                ReverserSegments[i] = new Rectangle(currentX + i * (reverserWidth + gap), rowY, reverserWidth, reverserHeight);
+            }
+            currentX += (reverserWidth + gap) * ReverserLabels.Length + gap;
 
-            ModePill = new Rectangle(ReverserSegments[ReverserSegments.Length - 1].Right + gap, rowY, pillWidth, reverserHeight);
+            // Mode column
+            ModeCaptionArea = new Rectangle(currentX, captionY, pillWidth, labelHeight);
+            ModePill = new Rectangle(currentX, rowY, pillWidth, reverserHeight);
+            currentX += pillWidth + gap;
 
-            ReverserCaptionArea = new Rectangle(ReverserSegments[0].X, captionY, labelWidth, labelHeight);
-            ModeCaptionArea = new Rectangle(ModePill.X, captionY, pillWidth, labelHeight);
+            // Close button [ ✕ ]
+            CloseBtn = new Rectangle(currentX, rowY, closeWidth, reverserHeight);
         }
     }
 }

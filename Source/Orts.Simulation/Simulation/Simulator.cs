@@ -1,4 +1,4 @@
-﻿// COPYRIGHT 2009, 2010, 2011, 2012, 2013 by the Open Rails project.
+// COPYRIGHT 2009, 2010, 2011, 2012, 2013 by the Open Rails project.
 // 
 // This file is part of Open Rails.
 // 
@@ -133,7 +133,7 @@ namespace Orts.Simulation
         public SuperElevation SuperElevation;
         // Railz: arcade throttle. Scales the player's train tractive effort (and the rate it arrives
         // at) so casual driving doesn't take minutes to get a heavy train rolling. 1 = real physics.
-        public const float ArcadeTractiveEffortDefault = 1.5f;
+        public const float ArcadeTractiveEffortDefault = 2.0f;
         public float ArcadeTractiveEffortFactor = ArcadeTractiveEffortDefault;
         public float RouteTrackGaugeM = 1.435f; // Standard gauge as a fallback
         public LoadStationsPopulationFile LoadStationsPopulationFile;

@@ -1,4 +1,4 @@
-﻿// COPYRIGHT 2021 by the Open Rails project.
+// COPYRIGHT 2021 by the Open Rails project.
 // 
 // This file is part of Open Rails.
 // 
@@ -1415,12 +1415,23 @@ namespace Orts.Viewer3D.Processes
 
             virtual protected VertexPositionTexture[] GetVerticies(Game game)
             {
-                var dd = (float)Material.Texture.Width / 2;
+                if (Material.Texture == null)
+                    return new VertexPositionTexture[0];
+
+                var shift = LoadingBandHeight(game.RenderProcess.DisplaySize.Y) / 2f;
+                var w = (float)Material.Texture.Width;
+                var h = (float)Material.Texture.Height;
+                var scaleX = (float)game.RenderProcess.DisplaySize.X / w;
+                var scaleY = (float)(game.RenderProcess.DisplaySize.Y - shift * 2) / h;
+                var scale = Math.Min(scaleX, scaleY);
+                w = w * scale / 2f;
+                h = h * scale / 2f;
+
                 return new[] {
-                    new VertexPositionTexture(new Vector3(-dd - 0.5f, +dd + 0.5f, -3), new Vector2(0, 0)),
-                    new VertexPositionTexture(new Vector3(+dd - 0.5f, +dd + 0.5f, -3), new Vector2(1, 0)),
-                    new VertexPositionTexture(new Vector3(-dd - 0.5f, -dd + 0.5f, -3), new Vector2(0, 1)),
-                    new VertexPositionTexture(new Vector3(+dd - 0.5f, -dd + 0.5f, -3), new Vector2(1, 1)),
+                    new VertexPositionTexture(new Vector3(-w - 0.5f, +h + 0.5f + shift, -3), new Vector2(0, 0)),
+                    new VertexPositionTexture(new Vector3(+w - 0.5f, +h + 0.5f + shift, -3), new Vector2(1, 0)),
+                    new VertexPositionTexture(new Vector3(-w - 0.5f, -h + 0.5f + shift, -3), new Vector2(0, 1)),
+                    new VertexPositionTexture(new Vector3(+w - 0.5f, -h + 0.5f + shift, -3), new Vector2(1, 1)),
                 };
             }
 

@@ -194,12 +194,12 @@ namespace Orts.Viewer3D.Popups
             LastCpuSample = now;
             LastCpuTotalMs = cpuTotalMs;
 
-            var text = String.Format("FPS {0:F0}   {1:F1} ms   CPU {2:F0}%   RAM {3:F0} MB   GPU {4}",
+            var text = String.Format("FPS: {0:F0} ({1:F1} ms)   CPU: {2:F0}%   RAM: {3:F0} MB   GPU: {4}",
                 Viewer.RenderProcess.FrameRate.SmoothedValue,
                 Viewer.RenderProcess.FrameTime.Value * 1000,
                 CpuPercent,
                 HostProcess.WorkingSet64 / 1048576,
-                GpuName);
+                string.IsNullOrWhiteSpace(GpuName) ? "GPU" : GpuName);
 
             var pad = TelemetryFont.Height / 2;
             var margin = ValueFont.Height * 3 / 2;
@@ -207,24 +207,29 @@ namespace Orts.Viewer3D.Popups
             return text;
         }
 
-        public void Draw(SpriteBatch spriteBatch)
+        public void DrawTelemetry(SpriteBatch spriteBatch)
         {
-            if (SpeedText == null)
+            if (TelemetryText == null)
                 return;
 
             var white = WindowManager.WhiteTexture;
+            var pad = TelemetryFont.Height / 2;
+            spriteBatch.Draw(white, TelemetryBadge, PanelColor);
+            spriteBatch.Draw(white, new Rectangle(TelemetryBadge.X, TelemetryBadge.Y, TelemetryBadge.Width, 1), BorderColor);
+            spriteBatch.Draw(white, new Rectangle(TelemetryBadge.X, TelemetryBadge.Bottom - 1, TelemetryBadge.Width, 1), BorderColor);
+            spriteBatch.Draw(white, new Rectangle(TelemetryBadge.X, TelemetryBadge.Y, 1, TelemetryBadge.Height), BorderColor);
+            spriteBatch.Draw(white, new Rectangle(TelemetryBadge.Right - 1, TelemetryBadge.Y, 1, TelemetryBadge.Height), BorderColor);
+            TelemetryFont.Draw(spriteBatch, new Rectangle(TelemetryBadge.X + pad, TelemetryBadge.Y + pad, TelemetryBadge.Width - pad * 2, TelemetryFont.Height), Point.Zero, TelemetryText, LabelAlignment.Left, TextColor, Scratch);
+        }
 
-            // Hardware telemetry strip, top-left: translucent AMOLED badge matching the driving panel.
-            if (TelemetryText != null)
-            {
-                var pad = TelemetryFont.Height / 2;
-                spriteBatch.Draw(white, TelemetryBadge, PanelColor);
-                spriteBatch.Draw(white, new Rectangle(TelemetryBadge.X, TelemetryBadge.Y, TelemetryBadge.Width, 1), BorderColor);
-                spriteBatch.Draw(white, new Rectangle(TelemetryBadge.X, TelemetryBadge.Bottom - 1, TelemetryBadge.Width, 1), BorderColor);
-                spriteBatch.Draw(white, new Rectangle(TelemetryBadge.X, TelemetryBadge.Y, 1, TelemetryBadge.Height), BorderColor);
-                spriteBatch.Draw(white, new Rectangle(TelemetryBadge.Right - 1, TelemetryBadge.Y, 1, TelemetryBadge.Height), BorderColor);
-                TelemetryFont.Draw(spriteBatch, new Rectangle(TelemetryBadge.X + pad, TelemetryBadge.Y + pad, TelemetryBadge.Width - pad * 2, TelemetryFont.Height), Point.Zero, TelemetryText, LabelAlignment.Left, TextColor, Scratch);
-            }
+        public void Draw(SpriteBatch spriteBatch)
+        {
+            var white = WindowManager.WhiteTexture;
+
+            DrawTelemetry(spriteBatch);
+
+            if (SpeedText == null)
+                return;
 
             // Translucent panel with a hairline border.
             spriteBatch.Draw(white, Panel, PanelColor);

@@ -1,4 +1,4 @@
-﻿// COPYRIGHT 2009, 2010, 2011, 2012, 2013, 2014 by the Open Rails project.
+// COPYRIGHT 2009, 2010, 2011, 2012, 2013, 2014 by the Open Rails project.
 // 
 // This file is part of Open Rails.
 // 
@@ -270,15 +270,18 @@ namespace Orts.Viewer3D.Processes
 
         internal void Update(GameTime gameTime)
         {
-            // Railz: pace the loop out to the frame-rate cap instead of spinning flat out. Loading
+            // Railz: pace the loop out to the 60 FPS cap instead of spinning flat out. Loading
             // keeps its 10 FPS fixed step, so only the running game (which drops the fixed step) is capped.
+            // Sleep ahead of target to prevent dual-core laptop overheating, and yield until target time.
             if (!Game.IsFixedTimeStep)
             {
                 var ahead = FrameTarget - FramePace.Elapsed;
-                if (ahead > FrameSleepSlack)
-                    Thread.Sleep(ahead - FrameSleepSlack);
-                else if (ahead > TimeSpan.Zero)
-                    SpinWait.SpinUntil(() => FramePace.Elapsed >= FrameTarget, FrameTarget);
+                if (ahead > TimeSpan.FromMilliseconds(2))
+                    Thread.Sleep(1);
+
+                while (FramePace.Elapsed < FrameTarget)
+                    Thread.Yield();
+
                 FramePace.Restart();
             }
 

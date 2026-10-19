@@ -1,4 +1,4 @@
-﻿// COPYRIGHT 2009, 2010, 2011, 2012, 2013 by the Open Rails project.
+// COPYRIGHT 2009, 2010, 2011, 2012, 2013 by the Open Rails project.
 // 
 // This file is part of Open Rails.
 // 
@@ -2631,17 +2631,18 @@ namespace Orts.Simulation.RollingStocks
         public virtual float GetAvailableTractionForceN(float t)
         {
             if (t <= 0) return 0;
+            float arcade = IsPlayerTrain ? Simulator.ArcadeTractiveEffortFactor : 1f;
             float powerW = float.MaxValue;
             float forceN;
             // Take into account power limitation
             if (LocomotivePowerSupply is ScriptedLocomotivePowerSupply supply && supply.MaximumPowerW > 0)
-                powerW = supply.MaximumPowerW * t * (1-PowerReduction);
+                powerW = supply.MaximumPowerW * t * (1-PowerReduction) * arcade;
             // This section calculates the traction force of the locomotive as follows:
             // Basic configuration (no TF table) - uses P = F /speed  relationship - requires power and force parameters to be set in the ENG file. 
             // Advanced configuration (TF table) - use a user defined tractive force table
             if (TractiveForceCurves == null)
             {
-                powerW = Math.Min(powerW, MaxPowerW * t * t * (1 - PowerReduction));
+                powerW = Math.Min(powerW, MaxPowerW * t * t * (1 - PowerReduction) * arcade);
                 
                 if (AbsTractionSpeedMpS > MaxSpeedMpS)
                 {
@@ -2705,7 +2706,7 @@ namespace Orts.Simulation.RollingStocks
                 // Ensure that power consumption never exceeds the power that is available for traction at the moment
                 if (LocomotivePowerSupply is ScriptedLocomotivePowerSupply supply)
                 {
-                    float maxPowerW = supply.AvailableTractionPowerW;
+                    float maxPowerW = supply.AvailableTractionPowerW * arcade;
                     if (this is MSTSDieselLocomotive dL)
                         maxPowerW *= dL.DieselTransmissionEfficiency;
                     if (maxForceN * AbsTractionSpeedMpS > maxPowerW) maxForceN = maxPowerW / AbsTractionSpeedMpS;

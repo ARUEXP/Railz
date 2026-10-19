@@ -268,19 +268,27 @@ namespace Orts.Viewer3D.Processes
             }
         }
 
+        public void ResetFramePace()
+        {
+            FramePace.Restart();
+        }
+
         internal void Update(GameTime gameTime)
         {
-            // Railz: pace the loop out to the 60 FPS cap instead of spinning flat out. Loading
-            // keeps its 10 FPS fixed step, so only the running game (which drops the fixed step) is capped.
-            // Sleep ahead of target to prevent dual-core laptop overheating, and yield until target time.
-            if (!Game.IsFixedTimeStep)
+            // Railz: when VSync is off, clamp render loop to 60 FPS to prevent unconstrained rendering.
+            // When VSync is on, DirectX hardware vertical retrace already handles pacing at 0% CPU.
+            if (!Game.IsFixedTimeStep && !Game.Settings.VerticalSync)
             {
                 var ahead = FrameTarget - FramePace.Elapsed;
                 if (ahead > TimeSpan.FromMilliseconds(2))
-                    Thread.Sleep(1);
+                {
+                    var sleepMs = (int)(ahead.TotalMilliseconds - 1);
+                    if (sleepMs > 0)
+                        Thread.Sleep(sleepMs);
+                }
 
                 while (FramePace.Elapsed < FrameTarget)
-                    Thread.Yield();
+                    Thread.SpinWait(10);
 
                 FramePace.Restart();
             }

@@ -846,13 +846,24 @@ namespace Orts.Viewer3D.Processes
                 }
                 logFileName = GetFilePath(settings, fileName);
 
-                // Ensure we start with an empty file.
+                // Ensure we start with an empty file if possible.
                 if (!appendLog)
-                    File.Delete(logFileName);
-                // Make Console.Out go to the log file AND the output stream.
-                Console.SetOut(new FileTeeLogger(logFileName, Console.Out));
-                // Make Console.Error go to the new Console.Out.
-                Console.SetError(Console.Out);
+                {
+                    try
+                    {
+                        if (File.Exists(logFileName))
+                            File.Delete(logFileName);
+                    }
+                    catch { }
+                }
+                try
+                {
+                    // Make Console.Out go to the log file AND the output stream.
+                    Console.SetOut(new FileTeeLogger(logFileName, Console.Out));
+                    // Make Console.Error go to the new Console.Out.
+                    Console.SetError(Console.Out);
+                }
+                catch { }
             }
 
             // Captures Trace.Trace* calls and others and formats.

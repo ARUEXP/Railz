@@ -1,4 +1,4 @@
-﻿// COPYRIGHT 2013 by the Open Rails project.
+// COPYRIGHT 2013 by the Open Rails project.
 // 
 // This file is part of Open Rails.
 // 
@@ -49,6 +49,7 @@ namespace Orts.Viewer3D.Processes
                 // Turn off the 10FPS fixed-time-step and return to running as fast as we can.
                 Game.IsFixedTimeStep = false;
                 Game.InactiveSleepTime = TimeSpan.Zero;
+                Game.RenderProcess.ResetFramePace();
 
                 // We must create these forms on the main thread (Render) or they won't pump events correctly.
                 Program.MapForm = new MapViewer(Viewer.Simulator, Viewer);

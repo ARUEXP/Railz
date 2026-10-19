@@ -1,4 +1,4 @@
-﻿// COPYRIGHT 2009, 2010, 2011, 2012, 2013 by the Open Rails project.
+// COPYRIGHT 2009, 2010, 2011, 2012, 2013 by the Open Rails project.
 //
 // This file is part of Open Rails.
 //
@@ -174,6 +174,20 @@ namespace Orts.Viewer3D
                 return true;
             var setting = InputSettings.Commands[(int)command];
             return setting.IsKeyDown(KeyboardState);
+        }
+
+        public static bool IsPressed(Keys key)
+        {
+            if (ComposingMessage) return false;
+            if (Orts.MultiPlayer.MPManager.IsMultiPlayer() && Orts.MultiPlayer.MPManager.Instance().ComposingText) return false;
+            return KeyboardState.IsKeyDown(key) && !LastKeyboardState.IsKeyDown(key);
+        }
+
+        public static bool IsDown(Keys key)
+        {
+            if (ComposingMessage) return false;
+            if (Orts.MultiPlayer.MPManager.IsMultiPlayer() && Orts.MultiPlayer.MPManager.Instance().ComposingText) return false;
+            return KeyboardState.IsKeyDown(key);
         }
 
         public static Keys[] GetPressedKeys() { return KeyboardState.GetPressedKeys(); }

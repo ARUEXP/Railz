@@ -1,4 +1,4 @@
-﻿// COPYRIGHT 2013, 2014 by the Open Rails project.
+// COPYRIGHT 2013, 2014 by the Open Rails project.
 // 
 // This file is part of Open Rails.
 // 
@@ -1760,8 +1760,9 @@ namespace Orts.Simulation.RollingStocks.SubSystems.PowerSupplies
                     Trace.TraceInformation("ExhaustDecelColor not found in Diesel Engine Config, set to default value = {0}", ExhaustDecelColor);
             }
 
-            SetValueFromLoco(ref ChangeUpRPMpS, ref Locomotive.MaxRPMChangeRate, "ChangeUpRPMpS", true, 40.0f);
-            SetValueFromLoco(ref ChangeDownRPMpS, ref Locomotive.MaxRPMChangeRate, "ChangeDownRPMpS", true, 40.0f);
+            float defaultRate = (Locomotive.Simulator != null && Locomotive.Simulator.ArcadeTractiveEffortFactor > 1.0f) ? 120.0f : 65.0f;
+            SetValueFromLoco(ref ChangeUpRPMpS, ref Locomotive.MaxRPMChangeRate, "ChangeUpRPMpS", true, defaultRate);
+            SetValueFromLoco(ref ChangeDownRPMpS, ref Locomotive.MaxRPMChangeRate, "ChangeDownRPMpS", true, defaultRate);
 
             SetDefaultValue(ref RateOfChangeUpRPMpSS, ChangeUpRPMpS, "RateOfChangeUpRPMpS");
             SetDefaultValue(ref RateOfChangeDownRPMpSS, ChangeDownRPMpS, "RateOfChangeDownRPMpS");

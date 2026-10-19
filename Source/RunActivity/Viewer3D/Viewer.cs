@@ -1,4 +1,4 @@
-﻿// COPYRIGHT 2009, 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017 by the Open Rails project.
+// COPYRIGHT 2009, 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017 by the Open Rails project.
 //
 // This file is part of Open Rails.
 //
@@ -165,6 +165,83 @@ namespace Orts.Viewer3D
             Use3DCabProperty.Value = !Use3DCabProperty.Value;
             if (Camera == CabCamera || Camera == ThreeDimCabCamera)
                 ActivateCabCamera();
+        }
+
+        /// <summary>
+        /// Cycles through available cameras (Cab -> Front Chase -> Rear Chase -> Trackside -> Passenger -> Free Roam).
+        /// Triggered by universal camera shortcut (C / V) or on-screen camera button.
+        /// </summary>
+        public void CycleCamera(bool reverse = false)
+        {
+            CheckReplaying();
+
+            // Determine current camera index:
+            // 0: Cab View (1)
+            // 1: Front Chase (2)
+            // 2: Rear Chase (3)
+            // 3: Trackside View (4)
+            // 4: Passenger View (5)
+            // 5: Free Roam Camera (8)
+            int currentIndex;
+            if (Camera == CabCamera || Camera == ThreeDimCabCamera)
+                currentIndex = 0;
+            else if (Camera == FrontCamera && FrontCamera.IsCameraFront)
+                currentIndex = 1;
+            else if (Camera == BackCamera || (Camera == FrontCamera && !FrontCamera.IsCameraFront))
+                currentIndex = 2;
+            else if (Camera == TracksideCamera || Camera == SpecialTracksideCamera)
+                currentIndex = 3;
+            else if (Camera == PassengerCamera)
+                currentIndex = 4;
+            else if (Camera is FreeRoamCamera)
+                currentIndex = 5;
+            else
+                currentIndex = 0;
+
+            int total = 6;
+            int nextIndex = (currentIndex + (reverse ? -1 : 1) + total) % total;
+
+            // Skip passenger camera if not available
+            if (nextIndex == 4 && (PassengerCamera == null || !PassengerCamera.IsAvailable))
+                nextIndex = (nextIndex + (reverse ? -1 : 1) + total) % total;
+
+            // Skip cab camera if neither 2D nor 3D cab is available
+            if (nextIndex == 0 && (CabCamera == null || !CabCamera.IsAvailable) && (ThreeDimCabCamera == null || !ThreeDimCabCamera.IsAvailable))
+                nextIndex = (nextIndex + (reverse ? -1 : 1) + total) % total;
+
+            string cameraName;
+            switch (nextIndex)
+            {
+                case 0:
+                    new UseCabCameraCommand(Log);
+                    cameraName = "Cab View (1)";
+                    break;
+                case 1:
+                    FrontCamera.IsCameraFront = true;
+                    new UseFrontCameraCommand(Log);
+                    cameraName = "Front Tracking View (2)";
+                    break;
+                case 2:
+                    FrontCamera.IsCameraFront = false;
+                    new UseBackCameraCommand(Log);
+                    cameraName = "Rear Tracking View (3)";
+                    break;
+                case 3:
+                    new UseTracksideCameraCommand(Log);
+                    cameraName = "Trackside View (4)";
+                    break;
+                case 4:
+                    new UsePassengerCameraCommand(Log);
+                    cameraName = "Passenger View (5)";
+                    break;
+                case 5:
+                default:
+                    new UseFreeRoamCameraCommand(Log);
+                    cameraName = "Free Roam Camera (8)";
+                    break;
+            }
+
+            Simulator?.Confirmer?.Message(ConfirmLevel.Information, Catalog.GetStringFmt("Camera: {0}", cameraName));
         }
 
         List<Camera> WellKnownCameras; // Providing Camera save functionality by GeorgeS
@@ -1094,6 +1171,12 @@ namespace Orts.Viewer3D
                 {
                     new ChangeCabCommand(Log);
                 }
+            }
+
+            if (UserInput.IsPressed(Microsoft.Xna.Framework.Input.Keys.C) || UserInput.IsPressed(Microsoft.Xna.Framework.Input.Keys.V))
+            {
+                bool reverse = UserInput.IsDown(Microsoft.Xna.Framework.Input.Keys.LeftShift) || UserInput.IsDown(Microsoft.Xna.Framework.Input.Keys.RightShift);
+                CycleCamera(reverse);
             }
 
             if (UserInput.IsPressed(UserCommand.CameraCab))

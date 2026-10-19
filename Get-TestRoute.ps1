@@ -56,13 +56,7 @@ if ($pathFile -and $consist -and (Test-Path $runActivity)) {
         $psi = New-Object System.Diagnostics.ProcessStartInfo
         $psi.FileName = $runActivity
         $psi.WorkingDirectory = Split-Path $runActivity
-        $psi.ArgumentList.Add('-start')
-        $psi.ArgumentList.Add('-explorer')
-        $psi.ArgumentList.Add($pathFile.FullName)
-        $psi.ArgumentList.Add($consist.FullName)
-        $psi.ArgumentList.Add('12:00:00')
-        $psi.ArgumentList.Add('1')
-        $psi.ArgumentList.Add('0')
+        $psi.Arguments = "-start -explorer `"$($pathFile.FullName)`" `"$($consist.FullName)`" 12:00:00 1 0"
         [System.Diagnostics.Process]::Start($psi) | Out-Null
         Write-Host "Launched RunActivity.exe successfully."
     }

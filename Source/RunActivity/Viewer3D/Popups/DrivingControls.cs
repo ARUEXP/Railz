@@ -69,6 +69,7 @@ namespace Orts.Viewer3D.Popups
         Rectangle Deck;
         Rectangle MiniTogglePill;
         Rectangle CloseBtn;
+        Rectangle CamBtn;
         Rectangle ThrottleLabel, ThrottleZeroBtn, ThrottleTrack, ThrottleFullBtn, ThrottleValueArea;
         Rectangle BrakeLabel, BrakeRelBtn, BrakeTrack, BrakeEmgBtn, BrakeValueArea;
         readonly Rectangle[] ReverserSegments = new Rectangle[ReverserLabels.Length];
@@ -167,6 +168,9 @@ namespace Orts.Viewer3D.Popups
             // Close button [ ✕ ]
             DrawButton(spriteBatch, white, CloseBtn, "✕", ModernDrivingHUD.MutedColor, ModernDrivingHUD.TrackColor);
 
+            // Camera button [ CAM ]
+            DrawButton(spriteBatch, white, CamBtn, "CAM (C)", ModernDrivingHUD.TextColor, ModernDrivingHUD.TrackColor);
+
             // Throttle: [ 0% ] [==== Slider ====] [ 100% ] [ Value% ]
             DrawButton(spriteBatch, white, ThrottleZeroBtn, "0%", ModernDrivingHUD.MutedColor, ModernDrivingHUD.TrackColor);
             DrawBar(spriteBatch, white, ThrottleTrack, ThrottleValueArea, Throttle, ThrottleText, ModernDrivingHUD.AccentColor);
@@ -264,6 +268,9 @@ namespace Orts.Viewer3D.Popups
 
                 if (ModePill.Contains(x, y))
                     ToggleArcade();
+
+                if (CamBtn.Contains(x, y))
+                    Viewer.CycleCamera();
 
                 for (var i = 0; i < ReverserSegments.Length; i++)
                     if (ReverserSegments[i].Contains(x, y))
@@ -373,6 +380,7 @@ namespace Orts.Viewer3D.Popups
             var reverserHeight = h + h / 2;
             var trackHeight = Math.Max(6, h - 4);
             var pillWidth = (int)(h * 8.5f);
+            var camWidth = (int)(h * 4.6f);
             var closeWidth = (int)(h * 1.8f);
             var margin = h * 3 / 2;
 
@@ -380,7 +388,7 @@ namespace Orts.Viewer3D.Popups
             var brakeColWidth = relBtnWidth + gap + trackWidth + gap + quickBtnWidth + gap + valueWidth;
 
             var height = pad * 2 + labelHeight + gap + reverserHeight;
-            var width = pad * 2 + throttleColWidth + gap * 2 + brakeColWidth + gap * 2 + (reverserWidth + gap) * ReverserLabels.Length + gap + pillWidth + gap + closeWidth;
+            var width = pad * 2 + throttleColWidth + gap * 2 + brakeColWidth + gap * 2 + (reverserWidth + gap) * ReverserLabels.Length + gap + pillWidth + gap + camWidth + gap + closeWidth;
 
             Deck = new Rectangle((Owner.ScreenSize.X - width) / 2, Math.Max(0, Owner.ScreenSize.Y - height - margin), width, height);
 
@@ -425,6 +433,10 @@ namespace Orts.Viewer3D.Popups
             ModeCaptionArea = new Rectangle(currentX, captionY, pillWidth, labelHeight);
             ModePill = new Rectangle(currentX, rowY, pillWidth, reverserHeight);
             currentX += pillWidth + gap;
+
+            // Camera switcher button [ CAM (C) ]
+            CamBtn = new Rectangle(currentX, rowY, camWidth, reverserHeight);
+            currentX += camWidth + gap;
 
             // Close button [ ✕ ]
             CloseBtn = new Rectangle(currentX, rowY, closeWidth, reverserHeight);

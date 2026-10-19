@@ -1,4 +1,4 @@
-﻿// COPYRIGHT 2009, 2010, 2011, 2012, 2013 by the Open Rails project.
+// COPYRIGHT 2009, 2010, 2011, 2012, 2013 by the Open Rails project.
 // 
 // This file is part of Open Rails.
 // 
@@ -808,13 +808,17 @@ namespace Orts.Simulation.RollingStocks
             // else Variable1 = MotiveForceN / MaxForceN; // Gearbased, Variable1 proportional to motive force
             // allows for motor volume proportional to effort.
 
-            // Refined Variable2 setting to graduate
+            // Refined Variable2 setting to graduate with responsive engine audio tracking
+            float effectiveChangeRate = (Simulator != null && Simulator.ArcadeTractiveEffortFactor > 1.0f)
+                ? Math.Max(PercentChangePerSec * 3.5f, 0.85f)
+                : Math.Max(PercentChangePerSec, 0.5f);
+
             if (Variable2 != EngineRPMRatio)
             {
                 // We must avoid Variable2 to run outside of [0, 1] range, even temporarily (because of multithreading)
                 Variable2 = EngineRPMRatio < Variable2 ?
-                    Math.Max(Math.Max(Variable2 - elapsedClockSeconds * PercentChangePerSec, EngineRPMRatio), 0) :
-                    Math.Min(Math.Min(Variable2 + elapsedClockSeconds * PercentChangePerSec, EngineRPMRatio), 1);
+                    Math.Max(Math.Max(Variable2 - elapsedClockSeconds * effectiveChangeRate, EngineRPMRatio), 0) :
+                    Math.Min(Math.Min(Variable2 + elapsedClockSeconds * effectiveChangeRate, EngineRPMRatio), 1);
             }
 
             EngineRPM = Variable2 * (MaxRPM - IdleRPM) + IdleRPM;

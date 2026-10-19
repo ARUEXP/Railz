@@ -2,12 +2,12 @@
 
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
-    <TargetFramework>net6-windows</TargetFramework>
+    <TargetFramework>net10.0-windows</TargetFramework>
     <UseWPF>true</UseWPF>
     <!-- WinForms is enabled only for its FolderBrowserDialog, which the legacy Menu also uses. -->
     <UseWindowsForms>true</UseWindowsForms>
     <Nullable>enable</Nullable>
-    <!-- Run on the installed .NET 8 desktop runtime instead of requiring the obsolete .NET 6 runtime. -->
+    <!-- Target .NET 10 desktop runtime natively with major rollforward support. -->
     <RollForward>Major</RollForward>
     <AssemblyTitle>Open Rails Modern Launcher</AssemblyTitle>
     <Description>Open Rails Transport Simulator</Description>

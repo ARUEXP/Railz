@@ -8,6 +8,9 @@
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
     <SelfContained>false</SelfContained>
     <EnableWindowsTargeting>true</EnableWindowsTargeting>
+    <TargetFramework Condition="'$(TargetFramework)' == '' and '$(TargetFrameworkVersion)' == ''">net10.0-windows</TargetFramework>
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
+    <EnableUnsafeBinaryFormatterSerialization>true</EnableUnsafeBinaryFormatterSerialization>
+    <NoWarn>$(NoWarn);NU1901;NU1902;NU1903;NU1904;CS8981;SYSLIB0011;WFO1000;WFO0003</NoWarn>
   </PropertyGroup>
 </Project>

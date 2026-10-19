@@ -73,7 +73,7 @@
 
 ### Prerequisites
 - Windows 10 / 11 (64-bit)
-- [.NET 6.0 SDK](https://dotnet.microsoft.com/download/dotnet/6.0)
+- [.NET 10.0 SDK](https://dotnet.microsoft.com/download/dotnet/10.0)
 - DirectX runtime support
 
 ### 1. Clone the Repository

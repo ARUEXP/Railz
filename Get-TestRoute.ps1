@@ -24,10 +24,6 @@ if (-not (Test-Path $profile)) {
 
 $root = $profile
 
-# Register content profile in Windows registry
-reg add 'HKCU\SOFTWARE\OpenRails\ORTS\Folders' /v $name /t REG_SZ /d $root /f | Out-Null
-Write-Host "Registered profile '$name' -> $root"
-
 $routesPath = Join-Path $root 'routes'
 $routeDir = Get-ChildItem $routesPath -Directory | Where-Object { $_.Name -like "*$RouteName*" } | Select-Object -First 1
 if (-not $routeDir) {

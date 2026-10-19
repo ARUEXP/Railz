@@ -121,17 +121,9 @@ namespace Orts.Viewer3D.Processes
 
         internal override void Dispose()
         {
-            Loading?.Dispose();
-            LoadingScreen?.Dispose();
-            LoadingBar?.Dispose();
-            TimetableLoadingBar?.Dispose();
-            LoadingText?.Dispose();
-            if (LoadingTextRetired != null)
-            {
-                foreach (var retired in LoadingTextRetired)
-                    retired?.Dispose();
-                LoadingTextRetired.Clear();
-            }
+            // Do not dispose loading primitives/textures/buffers synchronously here.
+            // This runs on the Loader thread during Game.ReplaceState, while the Render thread
+            // may still be completing the transition frame. GC safely reclaims unreferenced objects.
             base.Dispose();
         }
 
@@ -1440,13 +1432,20 @@ namespace Orts.Viewer3D.Processes
 
             public void Dispose()
             {
-                Material.Dispose();
             }
             
             public override void Draw(GraphicsDevice graphicsDevice)
             {
-                graphicsDevice.SetVertexBuffer(VertexBuffer);
-                graphicsDevice.DrawPrimitives(PrimitiveType.TriangleStrip, 0, 2);
+                if (VertexBuffer == null || VertexBuffer.IsDisposed)
+                    return;
+                try
+                {
+                    graphicsDevice.SetVertexBuffer(VertexBuffer);
+                    graphicsDevice.DrawPrimitives(PrimitiveType.TriangleStrip, 0, 2);
+                }
+                catch (Exception)
+                {
+                }
             }
         }
 
@@ -1576,14 +1575,20 @@ namespace Orts.Viewer3D.Processes
 
             public void Dispose()
             {
-                Material.Dispose();
-                VertexBuffer.Dispose();
             }
 
             public override void Draw(GraphicsDevice graphicsDevice)
             {
-                graphicsDevice.SetVertexBuffer(VertexBuffer);
-                graphicsDevice.DrawPrimitives(PrimitiveType.TriangleStrip, 0, 2);
+                if (VertexBuffer == null || VertexBuffer.IsDisposed)
+                    return;
+                try
+                {
+                    graphicsDevice.SetVertexBuffer(VertexBuffer);
+                    graphicsDevice.DrawPrimitives(PrimitiveType.TriangleStrip, 0, 2);
+                }
+                catch (Exception)
+                {
+                }
             }
 
             static Texture2D BuildTextTexture(GraphicsDevice graphicsDevice, int displayHeight, string routeName, string stage)
@@ -1668,7 +1673,6 @@ namespace Orts.Viewer3D.Processes
 
             public void Dispose()
             {
-                Texture?.Dispose();
             }
 
             virtual protected Texture2D GetTexture(Game game)
@@ -1686,11 +1690,20 @@ namespace Orts.Viewer3D.Processes
 
             public override void Render(GraphicsDevice graphicsDevice, IEnumerable<RenderItem> renderItems, ref Matrix XNAViewMatrix, ref Matrix XNAProjectionMatrix)
             {
-                foreach (var item in renderItems)
+                try
                 {
-                    Shader.WorldViewProjection = item.XNAMatrix * XNAViewMatrix * XNAProjectionMatrix;
-                    Shader.CurrentTechnique.Passes[0].Apply();
-                    item.RenderPrimitive.Draw(graphicsDevice);
+                    if (Texture != null && !Texture.IsDisposed)
+                    {
+                        foreach (var item in renderItems)
+                        {
+                            Shader.WorldViewProjection = item.XNAMatrix * XNAViewMatrix * XNAProjectionMatrix;
+                            Shader.CurrentTechnique.Passes[0].Apply();
+                            item.RenderPrimitive?.Draw(graphicsDevice);
+                        }
+                    }
+                }
+                catch (Exception)
+                {
                 }
             }
 

@@ -131,6 +131,10 @@ namespace Orts.Simulation
         public int CarVibrating;
         public bool UseSuperElevation; // Whether or not visual superelevation is enabled
         public SuperElevation SuperElevation;
+        // Railz: arcade throttle. Scales the player's train tractive effort (and the rate it arrives
+        // at) so casual driving doesn't take minutes to get a heavy train rolling. 1 = real physics.
+        public const float ArcadeTractiveEffortDefault = 1.5f;
+        public float ArcadeTractiveEffortFactor = ArcadeTractiveEffortDefault;
         public float RouteTrackGaugeM = 1.435f; // Standard gauge as a fallback
         public LoadStationsPopulationFile LoadStationsPopulationFile;
 

@@ -23,6 +23,7 @@ using Orts.Processes;
 using ORTS.Common;
 using System;
 using System.Diagnostics;
+using System.Threading;
 using System.Windows.Forms;
 using static ORTS.Settings.UserSettings;
 
@@ -67,6 +68,14 @@ namespace Orts.Viewer3D.Processes
         public static int[] ShadowMapDiameter; // diameter of shadow map
         public static float[] ShadowMapLimit; // diameter of shadow map far edge from camera
         public bool isFullScreen { get; set; }
+
+        // Railz: strict frame-rate cap for the running game, which is deliberately unthrottled
+        // (see GameStateViewer3D). Change FrameRateLimit to retune it.
+        public const int FrameRateLimit = 60;
+        static readonly TimeSpan FrameTarget = TimeSpan.FromSeconds(1.0 / FrameRateLimit);
+        // Windows' timer granularity is ~15.6ms, so the last stretch is spun out rather than slept.
+        static readonly TimeSpan FrameSleepSlack = TimeSpan.FromMilliseconds(2);
+        readonly Stopwatch FramePace = Stopwatch.StartNew();
 
         internal RenderProcess(Game game)
         {
@@ -261,6 +270,18 @@ namespace Orts.Viewer3D.Processes
 
         internal void Update(GameTime gameTime)
         {
+            // Railz: pace the loop out to the frame-rate cap instead of spinning flat out. Loading
+            // keeps its 10 FPS fixed step, so only the running game (which drops the fixed step) is capped.
+            if (!Game.IsFixedTimeStep)
+            {
+                var ahead = FrameTarget - FramePace.Elapsed;
+                if (ahead > FrameSleepSlack)
+                    Thread.Sleep(ahead - FrameSleepSlack);
+                else if (ahead > TimeSpan.Zero)
+                    SpinWait.SpinUntil(() => FramePace.Elapsed >= FrameTarget, FrameTarget);
+                FramePace.Restart();
+            }
+
             if (IsMouseVisible != Game.IsMouseVisible)
                 Game.IsMouseVisible = IsMouseVisible;
 

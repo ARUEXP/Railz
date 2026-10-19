@@ -38,15 +38,15 @@ namespace Orts.Viewer3D.Popups
     sealed class ModernDrivingHUD
     {
         // AMOLED palette, matching the launcher.
-        static readonly Color PanelColor = new Color(0x00, 0x00, 0x00, 0x99); // #000000 at 60%
-        static readonly Color BorderColor = new Color(0x22, 0x22, 0x22);
-        static readonly Color TrackColor = new Color(0x1C, 0x1C, 0x1C);
-        static readonly Color TextColor = new Color(0xFF, 0xFF, 0xFF);
-        static readonly Color MutedColor = new Color(0x8C, 0x8C, 0x8C);
-        static readonly Color AccentColor = new Color(0x25, 0x63, 0xEB);
-        static readonly Color DynamicColor = new Color(0xE0, 0x9B, 0x2B);
-        static readonly Color TrainBrakeColor = new Color(0xE0, 0x3B, 0x3B);
-        static readonly Color IndependentColor = new Color(0xB4, 0xB4, 0xB4);
+        internal static readonly Color PanelColor = new Color(0x00, 0x00, 0x00, 0x99); // #000000 at 60%
+        internal static readonly Color BorderColor = new Color(0x22, 0x22, 0x22);
+        internal static readonly Color TrackColor = new Color(0x1C, 0x1C, 0x1C);
+        internal static readonly Color TextColor = new Color(0xFF, 0xFF, 0xFF);
+        internal static readonly Color MutedColor = new Color(0x8C, 0x8C, 0x8C);
+        internal static readonly Color AccentColor = new Color(0x25, 0x63, 0xEB);
+        internal static readonly Color DynamicColor = new Color(0xE0, 0x9B, 0x2B);
+        internal static readonly Color TrainBrakeColor = new Color(0xE0, 0x3B, 0x3B);
+        internal static readonly Color IndependentColor = new Color(0xB4, 0xB4, 0xB4);
 
         const int ThrottleMeter = 0;
         const int DynamicMeter = 1;
@@ -78,8 +78,9 @@ namespace Orts.Viewer3D.Popups
         readonly WindowTextFont LabelFont;
         readonly WindowTextFont ValueFont;
 
-        // Buffers reused for the whole lifetime of the overlay.
-        readonly int[] Scratch = new int[24];
+        // Buffers reused for the whole lifetime of the overlay. Scratch holds one character index per
+        // glyph, so it has to be at least as long as the longest string drawn (the telemetry strip).
+        readonly int[] Scratch = new int[128];
         readonly float[] MeterValues = new float[MeterCount];
         readonly string[] MeterTexts = new string[MeterCount];
         readonly string[] MeterLabels = new string[MeterCount];
@@ -92,6 +93,16 @@ namespace Orts.Viewer3D.Popups
         bool HasSignal;
         Rectangle SignalSprite;
         int ReverserIndex = 1;
+
+        // Hardware telemetry strip, top-left. Sampled on the HUD's 4Hz refresh, never in Draw.
+        readonly WindowTextFont TelemetryFont;
+        readonly System.Diagnostics.Process HostProcess = System.Diagnostics.Process.GetCurrentProcess();
+        readonly string GpuName;
+        string TelemetryText;
+        Rectangle TelemetryBadge;
+        double CpuPercent;
+        DateTime LastCpuSample = DateTime.MinValue;
+        double LastCpuTotalMs;
 
         // Row sizes in pixels; rebuilt only when the display size changes.
         Point LayoutSize = new Point(-1, -1);
@@ -111,6 +122,8 @@ namespace Orts.Viewer3D.Popups
             DigitFont = owner.TextFontLargeBold;
             LabelFont = owner.TextFontSmall;
             ValueFont = owner.TextFontDefaultBold;
+            TelemetryFont = owner.TextFontMonoSpacedBold;
+            GpuName = Viewer.RenderProcess.GraphicsDevice.Adapter.Description;
 
             MeterLabels[ThrottleMeter] = Viewer.Catalog.GetString("THROTTLE");
             MeterLabels[DynamicMeter] = Viewer.Catalog.GetString("DYNAMIC BRAKE");
@@ -130,6 +143,9 @@ namespace Orts.Viewer3D.Popups
         /// <summary>Reads the simulator, and rebuilds the strings and geometry <see cref="Draw"/> will use.</summary>
         public void Prepare(bool updateFull)
         {
+            if (updateFull)
+                TelemetryText = ReadTelemetry();
+
             var locomotive = Viewer.PlayerLocomotive;
             if (locomotive == null)
                 return;
@@ -164,12 +180,51 @@ namespace Orts.Viewer3D.Popups
             }
         }
 
+        /// <summary>Samples the process once per HUD refresh and lays out the top-left telemetry badge.</summary>
+        string ReadTelemetry()
+        {
+            var now = DateTime.UtcNow;
+            var cpuTotalMs = HostProcess.TotalProcessorTime.TotalMilliseconds;
+            if (LastCpuSample != DateTime.MinValue)
+            {
+                var wallMs = (now - LastCpuSample).TotalMilliseconds;
+                if (wallMs > 100)
+                    CpuPercent = MathHelper.Clamp((float)((cpuTotalMs - LastCpuTotalMs) / wallMs * 100 / Environment.ProcessorCount), 0, 100);
+            }
+            LastCpuSample = now;
+            LastCpuTotalMs = cpuTotalMs;
+
+            var text = String.Format("FPS {0:F0}   {1:F1} ms   CPU {2:F0}%   RAM {3:F0} MB   GPU {4}",
+                Viewer.RenderProcess.FrameRate.SmoothedValue,
+                Viewer.RenderProcess.FrameTime.Value * 1000,
+                CpuPercent,
+                HostProcess.WorkingSet64 / 1048576,
+                GpuName);
+
+            var pad = TelemetryFont.Height / 2;
+            var margin = ValueFont.Height * 3 / 2;
+            TelemetryBadge = new Rectangle(margin, margin, TelemetryFont.MeasureString(text) + pad * 2, TelemetryFont.Height + pad * 2);
+            return text;
+        }
+
         public void Draw(SpriteBatch spriteBatch)
         {
             if (SpeedText == null)
                 return;
 
             var white = WindowManager.WhiteTexture;
+
+            // Hardware telemetry strip, top-left: translucent AMOLED badge matching the driving panel.
+            if (TelemetryText != null)
+            {
+                var pad = TelemetryFont.Height / 2;
+                spriteBatch.Draw(white, TelemetryBadge, PanelColor);
+                spriteBatch.Draw(white, new Rectangle(TelemetryBadge.X, TelemetryBadge.Y, TelemetryBadge.Width, 1), BorderColor);
+                spriteBatch.Draw(white, new Rectangle(TelemetryBadge.X, TelemetryBadge.Bottom - 1, TelemetryBadge.Width, 1), BorderColor);
+                spriteBatch.Draw(white, new Rectangle(TelemetryBadge.X, TelemetryBadge.Y, 1, TelemetryBadge.Height), BorderColor);
+                spriteBatch.Draw(white, new Rectangle(TelemetryBadge.Right - 1, TelemetryBadge.Y, 1, TelemetryBadge.Height), BorderColor);
+                TelemetryFont.Draw(spriteBatch, new Rectangle(TelemetryBadge.X + pad, TelemetryBadge.Y + pad, TelemetryBadge.Width - pad * 2, TelemetryFont.Height), Point.Zero, TelemetryText, LabelAlignment.Left, TextColor, Scratch);
+            }
 
             // Translucent panel with a hairline border.
             spriteBatch.Draw(white, Panel, PanelColor);

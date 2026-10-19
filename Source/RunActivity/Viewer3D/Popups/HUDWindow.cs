@@ -55,6 +55,7 @@ namespace Orts.Viewer3D.Popups
         readonly WindowTextFont TextFont;
         readonly HUDGraphMaterial HUDGraphMaterial;
         readonly ModernDrivingHUD ModernHUD;
+        readonly DrivingControls Controls;
 
         public int TextPage;
         int LocomotivePage = 2;
@@ -107,6 +108,7 @@ namespace Orts.Viewer3D.Popups
             ColumnWidth *= TextFont.Height;
 
             ModernHUD = new ModernDrivingHUD(owner);
+            Controls = new DrivingControls(owner);
 
             HUDGraphMaterial = (HUDGraphMaterial)Viewer.MaterialManager.Load("Debug");
 
@@ -258,7 +260,10 @@ namespace Orts.Viewer3D.Popups
             base.PrepareFrame(elapsedTime, updateFull);
 
             if (Visible)
+            {
                 ModernHUD.Prepare(updateFull);
+                Controls.Prepare(updateFull);
+            }
 
             if (updateFull)
             {
@@ -285,6 +290,9 @@ namespace Orts.Viewer3D.Popups
 
         public override void Draw(SpriteBatch spriteBatch)
         {
+            // The driving deck sits bottom-centre on every page, including the legacy text pages.
+            Controls.Draw(spriteBatch);
+
             // Page 0 is the driver's basic HUD. Draw the modern overlay instead of the legacy text
             // matrix; the detail pages below it keep the text table for debugging.
             if (TextPage == 0)

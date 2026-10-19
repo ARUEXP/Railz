@@ -18,6 +18,7 @@
 // Define this to include extra data on loading performance and progress indications.
 //#define DEBUG_LOADING
 
+using GNU.Gettext;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Orts.Common;
@@ -102,7 +103,16 @@ namespace Orts.Viewer3D.Processes
         LoadingScreenPrimitive LoadingScreen;
         LoadingBarPrimitive LoadingBar;
         TimetableLoadingBarPrimitive TimetableLoadingBar;
+        LoadingTextPrimitive LoadingText;
         Matrix LoadingMatrix = Matrix.Identity;
+
+        // Railz: the loading card is rebuilt whenever the loader reaches a new stage. The render
+        // thread may still be holding an older one, so retired cards live until the state is gone.
+        readonly List<LoadingTextPrimitive> LoadingTextRetired = new List<LoadingTextPrimitive>();
+
+        // Viewer.Catalog only exists once the viewer has been constructed, which happens long after
+        // the loading card is built, so the card carries its own catalog.
+        static readonly GettextResourceManager LoadingCatalog = new GettextResourceManager("RunActivity");
 
         public GameStateRunActivity(string[] args)
         {
@@ -115,14 +125,31 @@ namespace Orts.Viewer3D.Processes
             LoadingScreen.Dispose();
             LoadingBar.Dispose();
             TimetableLoadingBar.Dispose();
+            LoadingText?.Dispose();
+            foreach (var retired in LoadingTextRetired)
+                retired.Dispose();
+            LoadingTextRetired.Clear();
             base.Dispose();
+        }
+
+        /// <summary>
+        /// Shows the route name and the phase the loader has reached on the loading screen.
+        /// </summary>
+        void SetLoadingStage(string stage, string routeName)
+        {
+            if (LoadingText != null)
+                LoadingTextRetired.Add(LoadingText);
+            LoadingText = new LoadingTextPrimitive(Game, routeName, stage);
         }
 
         internal override void Update(RenderFrame frame, double totalRealSeconds)
         {
             UpdateLoading();
 
-            if (Loading != null)
+            // The route artwork carries its own branding, so the generic Loading.png only serves as
+            // a fallback when a route ships no loading image; otherwise it would show through the
+            // band left at the bottom for the text.
+            if (Loading != null && (LoadingScreen == null || LoadingScreen.Material.Texture == null))
             {
                 frame.AddPrimitive(Loading.Material, Loading, RenderPrimitiveGroup.Overlay, ref LoadingMatrix);
             }
@@ -130,6 +157,11 @@ namespace Orts.Viewer3D.Processes
             if (LoadingScreen != null)
             {
                 frame.AddPrimitive(LoadingScreen.Material, LoadingScreen, RenderPrimitiveGroup.Overlay, ref LoadingMatrix);
+            }
+
+            if (LoadingText != null)
+            {
+                frame.AddPrimitive(LoadingText.Material, LoadingText, RenderPrimitiveGroup.Overlay, ref LoadingMatrix);
             }
 
             if (LoadingBar != null)
@@ -363,6 +395,7 @@ namespace Orts.Viewer3D.Processes
                 if (cancellation.IsCancellationRequested) return;
             }
 
+            SetLoadingStage("Building world", Simulator.RouteName);
             Viewer = new Viewer(Simulator, Game);
 
             Game.ReplaceState(new GameStateViewer3D(Viewer));
@@ -508,7 +541,8 @@ namespace Orts.Viewer3D.Processes
                     Acttype = values.acttype;
                     InitSimulator(settings, values.args, "Resume", values.acttype);
                     Simulator.Restore(inf, values.pathName, values.initialTileX, values.initialTileZ, Game.LoaderProcess.CancellationToken);
-                    Viewer = new Viewer(Simulator, Game);
+                    SetLoadingStage("Building world", Simulator.RouteName);
+            Viewer = new Viewer(Simulator, Game);
                     if (Client != null || Server != null)
                         if (Acttype == "activity") Simulator.GetPathAndConsist();
                     if (Client != null)
@@ -605,7 +639,8 @@ namespace Orts.Viewer3D.Processes
                 Acttype = values.acttype;
                 InitSimulator(settings, values.args, "Replay", values.acttype);
                 Simulator.Start(Game.LoaderProcess.CancellationToken);
-                Viewer = new Viewer(Simulator, Game);
+                SetLoadingStage("Building world", Simulator.RouteName);
+            Viewer = new Viewer(Simulator, Game);
             }
 
             // Load command log to replay
@@ -675,7 +710,8 @@ namespace Orts.Viewer3D.Processes
                     InitSimulator(settings, values.args, "Replay");
                 }
                 Simulator.Start(Game.LoaderProcess.CancellationToken);
-                Viewer = new Viewer(Simulator, Game);
+                SetLoadingStage("Building world", Simulator.RouteName);
+            Viewer = new Viewer(Simulator, Game);
             }
             else
             {
@@ -687,7 +723,8 @@ namespace Orts.Viewer3D.Processes
                     var values = GetSavedValues(inf);
                     InitSimulator(settings, values.args, "Resume", values.acttype);
                     Simulator.Restore(inf, values.pathName, values.initialTileX, values.initialTileZ, Game.LoaderProcess.CancellationToken);
-                    Viewer = new Viewer(Simulator, Game);
+                    SetLoadingStage("Building world", Simulator.RouteName);
+            Viewer = new Viewer(Simulator, Game);
                     Viewer.Restore(inf);
                 }
             }
@@ -731,7 +768,8 @@ namespace Orts.Viewer3D.Processes
             {
                 InitSimulator(settings, args, "Test");
                 Simulator.Start(Game.LoaderProcess.CancellationToken);
-                Viewer = new Viewer(Simulator, Game);
+                SetLoadingStage("Building world", Simulator.RouteName);
+            Viewer = new Viewer(Simulator, Game);
                 Game.ReplaceState(exitGameState);
                 Game.PushState(new GameStateViewer3D(Viewer));
                 exitGameState.LoadTime = (DateTime.Now - startTime).TotalSeconds - Viewer.RealTime;
@@ -1100,6 +1138,11 @@ namespace Orts.Viewer3D.Processes
             }
 
             LogSeparator();
+
+            // Railz: the route itself is read inside the switch below, so the card starts out with
+            // the stage only and picks the route name up as soon as the simulator has parsed it.
+            SetLoadingStage("Reading route data", null);
+
             if (settings.MultiplayerServer || settings.MultiplayerClient)
             {
                 if (settings.MultiplayerServer)
@@ -1151,6 +1194,8 @@ namespace Orts.Viewer3D.Processes
                     }
                     break;
             }
+
+            SetLoadingStage("Loading scenario", Simulator.RouteName);
 
             if (settings.MultiplayerServer)
             {
@@ -1345,6 +1390,11 @@ namespace Orts.Viewer3D.Processes
             return 0;
         }
 
+        // Railz: everything that identifies the run - route name, loading stage and progress bar -
+        // shares a black band across the bottom of the screen, so the route artwork is fitted above
+        // it instead of filling the frame. The band is a share of the window height, never a crop.
+        static int LoadingBandHeight(int displayHeight) => Math.Max(130, displayHeight * 15 / 100);
+
         class LoadingPrimitive : RenderPrimitive, IDisposable
         {
             public readonly LoadingMaterial Material;
@@ -1401,6 +1451,9 @@ namespace Orts.Viewer3D.Processes
             protected override VertexPositionTexture[] GetVerticies(Game game)
             {
                 float w, h;
+                // The band sits under the artwork, so the artwork is lifted by half of it and fitted
+                // into the height that is left over.
+                var shift = LoadingBandHeight(game.RenderProcess.DisplaySize.Y) / 2f;
 
                 if (Material.Texture == null)
                 {
@@ -1411,16 +1464,16 @@ namespace Orts.Viewer3D.Processes
                     w = (float)Material.Texture.Width;
                     h = (float)Material.Texture.Height;
                     var scaleX = (float)game.RenderProcess.DisplaySize.X / w;
-                    var scaleY = (float)game.RenderProcess.DisplaySize.Y / h;
+                    var scaleY = (float)(game.RenderProcess.DisplaySize.Y - shift * 2) / h;
                     var scale = scaleX < scaleY ? scaleX : scaleY;
                     w = w * scale / 2;
                     h = h * scale / 2;
                 }
                 return new[] {
-                    new VertexPositionTexture(new Vector3(-w - 0.5f, +h + 0.5f, -2), new Vector2(0, 0)),
-                    new VertexPositionTexture(new Vector3(+w - 0.5f, +h + 0.5f, -2), new Vector2(1, 0)),
-                    new VertexPositionTexture(new Vector3(-w - 0.5f, -h + 0.5f, -2), new Vector2(0, 1)),
-                    new VertexPositionTexture(new Vector3(+w - 0.5f, -h + 0.5f, -2), new Vector2(1, 1)),
+                    new VertexPositionTexture(new Vector3(-w - 0.5f, +h + 0.5f + shift, -2), new Vector2(0, 0)),
+                    new VertexPositionTexture(new Vector3(+w - 0.5f, +h + 0.5f + shift, -2), new Vector2(1, 0)),
+                    new VertexPositionTexture(new Vector3(-w - 0.5f, -h + 0.5f + shift, -2), new Vector2(0, 1)),
+                    new VertexPositionTexture(new Vector3(+w - 0.5f, -h + 0.5f + shift, -2), new Vector2(1, 1)),
                 };
             }
         }
@@ -1455,10 +1508,12 @@ namespace Orts.Viewer3D.Processes
 
             protected static void GetLoadingBarSize(Game game, out int w, out int h, out float x, out float y)
             {
-                w = game.RenderProcess.DisplaySize.X;
-                h = 10;
+                // Railz: inset to three fifths of the window and thinned down, resting on the floor
+                // of the loading band instead of running the full width of the screen.
+                w = game.RenderProcess.DisplaySize.X * 3 / 5;
+                h = Math.Max(6, game.RenderProcess.DisplaySize.Y / 180);
                 x = -w / 2 - 0.5f;
-                y = game.RenderProcess.DisplaySize.Y / 2 - h - 0.5f;
+                y = game.RenderProcess.DisplaySize.Y / 2 - h - Math.Max(24, game.RenderProcess.DisplaySize.Y / 30) - 0.5f;
             }
         }
 
@@ -1477,10 +1532,118 @@ namespace Orts.Viewer3D.Processes
             }
         }
 
+        /// <summary>
+        /// The route name and the loading stage, rasterised once per stage and shown as a card in the
+        /// band left under the route artwork.
+        /// </summary>
+        class LoadingTextPrimitive : RenderPrimitive, IDisposable
+        {
+            public readonly LoadingMaterial Material;
+            readonly VertexBuffer VertexBuffer;
+
+            public LoadingTextPrimitive(Game game, string routeName, string stage)
+            {
+                var texture = BuildTextTexture(game.RenderProcess.GraphicsDevice, game.RenderProcess.DisplaySize.Y, routeName ?? "", stage);
+                Material = new LoadingTextMaterial(game, texture);
+
+                var halfWidth = texture.Width / 2f;
+                var halfHeight = texture.Height / 2f;
+                // Hung from the top of the band so the card always sits directly under the artwork.
+                var centre = -game.RenderProcess.DisplaySize.Y / 2f + LoadingBandHeight(game.RenderProcess.DisplaySize.Y) - 8 - halfHeight;
+                var vertices = new[] {
+                    new VertexPositionTexture(new Vector3(-halfWidth - 0.5f, centre + halfHeight, -1), new Vector2(0, 0)),
+                    new VertexPositionTexture(new Vector3(+halfWidth - 0.5f, centre + halfHeight, -1), new Vector2(1, 0)),
+                    new VertexPositionTexture(new Vector3(-halfWidth - 0.5f, centre - halfHeight, -1), new Vector2(0, 1)),
+                    new VertexPositionTexture(new Vector3(+halfWidth - 0.5f, centre - halfHeight, -1), new Vector2(1, 1)),
+                };
+                VertexBuffer = new VertexBuffer(game.GraphicsDevice, typeof(VertexPositionTexture), vertices.Length, BufferUsage.WriteOnly);
+                VertexBuffer.SetData(vertices);
+            }
+
+            public void Dispose()
+            {
+                Material.Dispose();
+                VertexBuffer.Dispose();
+            }
+
+            public override void Draw(GraphicsDevice graphicsDevice)
+            {
+                graphicsDevice.SetVertexBuffer(VertexBuffer);
+                graphicsDevice.DrawPrimitives(PrimitiveType.TriangleStrip, 0, 2);
+            }
+
+            static Texture2D BuildTextTexture(GraphicsDevice graphicsDevice, int displayHeight, string routeName, string stage)
+            {
+                // Everything scales with the window so the card keeps its place in the band.
+                var scale = Math.Max(1f, displayHeight / 1080f);
+                var lineHeight = (int)(46 * scale);
+
+                using (var routeFont = new System.Drawing.Font(System.Drawing.FontFamily.GenericSansSerif, 32f * scale, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Pixel))
+                using (var stageFont = new System.Drawing.Font(System.Drawing.FontFamily.GenericSansSerif, 18f * scale, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Pixel))
+                {
+                    var width = 1;
+                    var height = 1;
+                    using (var measure = new System.Drawing.Bitmap(1, 1))
+                    using (var measureGraphics = System.Drawing.Graphics.FromImage(measure))
+                    {
+                        width = (int)Math.Ceiling(Math.Max(measureGraphics.MeasureString(routeName, routeFont).Width, measureGraphics.MeasureString(stage, stageFont).Width)) + 8;
+                        height = lineHeight + (int)Math.Ceiling(measureGraphics.MeasureString(stage, stageFont).Height) + 4;
+                    }
+
+                    var rectangle = new System.Drawing.Rectangle(0, 0, width, height);
+                    var buffer = new byte[4 * width * height];
+                    using (var bitmap = new System.Drawing.Bitmap(width, height, System.Drawing.Imaging.PixelFormat.Format32bppRgb))
+                    using (var graphics = System.Drawing.Graphics.FromImage(bitmap))
+                    {
+                        // Transparent where nothing is drawn, so only the glyphs reach the screen.
+                        graphics.Clear(System.Drawing.Color.Black);
+                        graphics.TextRenderingHint = System.Drawing.Text.TextRenderingHint.AntiAliasGridFit;
+                        var format = new System.Drawing.StringFormat
+                        {
+                            Alignment = System.Drawing.StringAlignment.Center,
+                            LineAlignment = System.Drawing.StringAlignment.Near,
+                        };
+                        graphics.DrawString(routeName, routeFont, System.Drawing.Brushes.White, new System.Drawing.RectangleF(0, 0, width, lineHeight), format);
+                        graphics.DrawString(stage, stageFont, System.Drawing.Brushes.Gray, new System.Drawing.RectangleF(0, lineHeight, width, height - lineHeight), format);
+
+                        var bits = bitmap.LockBits(rectangle, System.Drawing.Imaging.ImageLockMode.ReadOnly, bitmap.PixelFormat);
+                        Marshal.Copy(bits.Scan0, buffer, 0, buffer.Length);
+                        bitmap.UnlockBits(bits);
+                    }
+
+                    // Same treatment as the window text: white, with the drawn luminance carried by
+                    // the alpha channel. The Loading technique blends non-premultiplied, so the card
+                    // lands on the black band at exactly the shade it was drawn at - grey text reads
+                    // grey, and no tint has to be pushed through the shader.
+                    for (var i = 0; i < buffer.Length; i += 4)
+                    {
+                        buffer[i + 3] = (byte)((buffer[i] + buffer[i + 1] + buffer[i + 2]) / 3);
+                        buffer[i] = buffer[i + 1] = buffer[i + 2] = 255;
+                    }
+
+                    var texture = new Texture2D(graphicsDevice, width, height, false, SurfaceFormat.Color);
+                    texture.SetData(buffer);
+                    return texture;
+                }
+            }
+        }
+
+        class LoadingTextMaterial : LoadingMaterial
+        {
+            public LoadingTextMaterial(Game game, Texture2D texture)
+                : base(game)
+            {
+                // Takes over from the generic splash. That texture is shared, so it is only
+                // re-pointed here and left for whoever loaded it first to release.
+                Texture = texture;
+            }
+        }
+
         class LoadingMaterial : Material, IDisposable
         {
             public readonly LoadingShader Shader;
-            public readonly Texture2D Texture;
+            // Replaced by the loading card, which renders its own text instead of the splash.
+            public Texture2D Texture { get; protected set; }
 
             public LoadingMaterial(Game game)
                 : base(null, null)

@@ -2693,8 +2693,11 @@ namespace Orts.Simulation.RollingStocks
                 // Set the target force to the theoretically available tractive force for current throttle setting
                 // If there is a limit on the amount of throttle, ensure that tractive force never exceeds the limit
                 // imposed by that throttle setting
-                float targetForceN = GetAvailableTractionForceN(t);
-                float limitForceN = GetAvailableTractionForceN(maxthrottle);
+                // Railz arcade throttle: the player's train gets scaled tractive effort, and the ramp rates are
+                // scaled with it so the real spool time constants survive while the force grows. 1 = real physics.
+                float arcade = IsPlayerTrain ? Simulator.ArcadeTractiveEffortFactor : 1f;
+                float targetForceN = GetAvailableTractionForceN(t) * arcade;
+                float limitForceN = GetAvailableTractionForceN(maxthrottle) * arcade;
                 float maxForceN = float.MaxValue;
                 // Ignore force limit for exotic curves where higher throttle settings provide less tractive force
                 if (limitForceN >= targetForceN)
@@ -2707,7 +2710,9 @@ namespace Orts.Simulation.RollingStocks
                         maxPowerW *= dL.DieselTransmissionEfficiency;
                     if (maxForceN * AbsTractionSpeedMpS > maxPowerW) maxForceN = maxPowerW / AbsTractionSpeedMpS;
                 }
-                UpdateForceWithRamp(ref TractionForceN, elapsedClockSeconds, targetForceN, maxForceN, TractionForceRampUpNpS, TractionForceRampDownNpS, TractionForceRampDownToZeroNpS, TractionPowerRampUpWpS, TractionPowerRampDownWpS, TractionPowerRampDownToZeroWpS);
+                UpdateForceWithRamp(ref TractionForceN, elapsedClockSeconds, targetForceN, maxForceN,
+                    TractionForceRampUpNpS * arcade, TractionForceRampDownNpS * arcade, TractionForceRampDownToZeroNpS * arcade,
+                    TractionPowerRampUpWpS * arcade, TractionPowerRampDownWpS * arcade, TractionPowerRampDownToZeroWpS * arcade);
             }
             else
             {
